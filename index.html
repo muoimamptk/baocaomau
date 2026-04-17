@@ -1,403 +1,340 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8" />
-  <title>🏇 Kết quả đua ngựa</title>
-  <style>
-    body {
-      font-family: 'Arial', sans-serif;
-      background-color: #e0f7fa; /* Thay đổi nền từ #fefefe sang màu xanh nhạt */
-      color: #222;
-      padding: 20px;
-      text-align: center;
-    }
-    h2, h3 {
-      color: #b80000;
-    }
-    .input-area {
-      margin-bottom: 20px;
-    }
-    input[type="text"] {
-      width: 100px;
-      height: 50px;
-      font-size: 24px;
-      text-align: center;
-      border: 2px solid #b80000;
-      border-radius: 8px;
-      background-color: #fff5f5;
-    }
-    table {
-      border-collapse: collapse;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      width: 100%;
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 6px;
-      font-size: 14px;
-    }
-    th {
-      background-color: #f44336;
-      color: white;
-    }
-    .number-cell {
-      background-color: #e6f7ff;
-      font-weight: bold;
-    }
-    .grid {
-      display: flex;
-      justify-content: center;
-      gap: 20px;
-      flex-wrap: wrap;
-    }
-    .section {
-      flex: 1;
-      min-width: 280px;
-      max-width: 400px;
-    }
+import React, { useEffect, useMemo, useState } from "react";
+import { Search, RefreshCw } from "lucide-react";
 
-    /* Thêm style cho nút xuất file */
-    #exportExcelBtn {
-      display: inline-block;
-      margin-left: 15px;
-      padding: 12px 20px;
-      font-size: 18px;
-      background-color: #b80000;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      user-select: none;
-    }
-    #exportExcelBtn:hover {
-      background-color: #930000;
-    }
+const GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1s6r-yM4PcE3aczLZwk0r3SVaeJlWWyEsdjYvtup-hWw/edit?usp=sharing";
+const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80";
 
-    /* Style nút quay số */
-    #spinBtn {
-      display: inline-block;
-      margin-left: 15px;
-      padding: 12px 20px;
-      font-size: 18px;
-      background-color: #0077b6;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      user-select: none;
-    }
-    #spinBtn:hover {
-      background-color: #005f87;
-    }
+function normalizeText(text) {
+  return String(text || "").trim().toLowerCase();
+}
 
-    #spinResult {
-      font-size: 24px;
-      margin-left: 20px;
-      font-weight: bold;
-    }
+function getGoogleSheetCsvUrl(sheetUrl) {
+  if (!sheetUrl) return "";
+  const match = sheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+  if (!match) return "";
+  const sheetId = match[1];
+  return `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=0`;
+}
 
-    /* Style nút sửa (nút x nhỏ lại) */
-    .btn-edit {
-      font-size: 12px;
-      padding: 2px 6px;
-      border-radius: 4px;
-      background-color: #b80000;
-      color: white;
-      border: none;
-      cursor: pointer;
-      user-select: none;
-    }
-    .btn-edit:hover {
-      background-color: #930000;
-    }
+function parseCsvLine(line) {
+  const result = [];
+  let current = "";
+  let inQuotes = false;
 
-    /* Style iframe youtube góc dưới phải */
-    #youtubeContainer {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      width: 320px;
-      height: 180px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-      border-radius: 12px;
-      overflow: hidden;
-      background: #000;
-      z-index: 1000;
-    }
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i];
+    const next = line[i + 1];
 
-    #youtubeMuteBtn {
-      position: fixed;
-      bottom: 210px;
-      right: 20px;
-      background-color: #b80000;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      padding: 6px 10px;
-      font-size: 14px;
-      cursor: pointer;
-      user-select: none;
-      z-index: 1001;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.4);
-    }
-
-    #youtubeMuteBtn:hover {
-      background-color: #930000;
-    }
-  </style>
-</head>
-<body>
-  <h2>🏇 Kết quả đua ngựa</h2>
-  <div class="input-area">
-    <input type="text" id="nums" maxlength="3" placeholder="VD: 123" />
-    <button id="exportExcelBtn" style="display: inline-block;">Xuất Excel</button>
-    <button id="spinBtn">Quay số</button>
-    <span id="spinResult"></span>
-  </div>
-
-  <div class="grid">
-    <div class="section">
-      <h3>📋 Lịch sử đua</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Lượt</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>Sửa</th>
-          </tr>
-        </thead>
-        <tbody id="dataBody"></tbody>
-      </table>
-    </div>
-    <div class="section">
-      <h3>📊 Số lần ngựa về top 3</h3>
-      <table>
-        <thead>
-          <tr><th>Ngựa</th><th>Lượt về top</th></tr>
-        </thead>
-        <tbody id="countBody"></tbody>
-      </table>
-    </div>
-    <div class="section">
-      <h3>🔮 Dự đoán: Ngựa nổi bật</h3>
-      <table>
-        <thead>
-          <tr><th>Ngựa</th><th>Chuỗi liên tiếp</th></tr>
-        </thead>
-        <tbody id="predictionBody"></tbody>
-      </table>
-    </div>
-    <div class="section">
-      <h3>⏱️ Ngựa 3 lần chưa ra</h3>
-      <table>
-        <thead>
-          <tr><th>Ngựa</th><th>Số lượt vắng mặt</th></tr>
-        </thead>
-        <tbody id="missingBody"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Thêm thư viện SheetJS -->
-  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-
-  <!-- Thư viện YouTube iframe API -->
-  <script src="https://www.youtube.com/iframe_api"></script>
-
-  <div id="youtubeContainer"></div>
-  <button id="youtubeMuteBtn">Bật tiếng</button>
-
-  <script>
-    const input = document.getElementById('nums');
-    let dataList = [];
-
-    // YouTube player biến toàn cục
-    let player;
-    let isMuted = true;
-
-    function onYouTubeIframeAPIReady() {
-      player = new YT.Player('youtubeContainer', {
-        height: '180',
-        width: '320',
-        videoId: 'D9b_gUe-D24', // Bạn đổi videoId nếu muốn video khác
-        playerVars: {
-          autoplay: 1,
-          mute: 1,
-          controls: 1,
-          loop: 1,
-          playlist: 'D9b_gUe-D24',
-          modestbranding: 1,
-          rel: 0,
-          iv_load_policy: 3,
-        },
-        events: {
-          onReady: (event) => {
-            event.target.playVideo();
-            event.target.mute();
-          }
-        }
-      });
-    }
-
-    // Nút bật/tắt tiếng
-    const muteBtn = document.getElementById('youtubeMuteBtn');
-    muteBtn.addEventListener('click', () => {
-      if(!player) return;
-      if(isMuted) {
-        player.unMute();
-        muteBtn.textContent = 'Tắt tiếng';
-        isMuted = false;
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        current += '"';
+        i += 1;
       } else {
-        player.mute();
-        muteBtn.textContent = 'Bật tiếng';
-        isMuted = true;
+        inQuotes = !inQuotes;
       }
+    } else if (char === "," && !inQuotes) {
+      result.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+
+  result.push(current.trim());
+  return result;
+}
+
+function csvToRows(text) {
+  const lines = String(text || "")
+    .split(String.fromCharCode(10))
+    .map((line) => line.replaceAll(String.fromCharCode(13), "").trim())
+    .filter(Boolean);
+
+  if (lines.length < 2) return [];
+
+  const headers = parseCsvLine(lines[0]).map((item) => normalizeText(item));
+
+  return lines.slice(1).map((line) => {
+    const cols = parseCsvLine(line);
+    const row = {};
+    headers.forEach((header, index) => {
+      row[header] = cols[index] || "";
     });
+    return row;
+  });
+}
 
-    function calculateStreaks() {
-      const streak = {1:0,2:0,3:0,4:0,5:0,6:0};
-      for (let horse = 1; horse <= 6; horse++) {
-        let count = 0;
-        for (let i = dataList.length - 1; i >= 0; i--) {
-          if (dataList[i].includes(horse)) {
-            count++;
-          } else {
-            break;
-          }
-        }
-        streak[horse] = count;
-      }
-      return streak;
-    }
+function mapSheetRows(rows) {
+  return rows.map((row) => ({
+    code: row.code || row["mã"] || row["ma"] || row["mã số"] || row["ma so"] || "",
+    size: row.size || row["kích thước"] || row["kich thuoc"] || row["kt"] || "",
+    image: row.image || row["hình ảnh"] || row["hinh anh"] || row["ảnh"] || row["anh"] || "",
+    store: row.store || row["cửa hàng"] || row["cua hang"] || row["tên cửa hàng"] || row["ten cua hang"] || "",
+    area: row.area || row["khu vực"] || row["khu vuc"] || row["địa điểm"] || row["dia diem"] || "",
+  }));
+}
 
-    function calculateMissings() {
-      const missing = {1:0,2:0,3:0,4:0,5:0,6:0};
-      for (let horse = 1; horse <= 6; horse++) {
-        let count = 0;
-        for (let i = dataList.length - 1; i >= 0; i--) {
-          if (dataList[i].includes(horse)) {
-            break;
-          } else {
-            count++;
-          }
-        }
-        missing[horse] = count;
-      }
-      return missing;
-    }
+function groupTiles(rows) {
+  const grouped = new Map();
+  const areaOrder = {
+    "đức hoà": 1,
+    "đức hòa": 1,
+    "đức huệ": 2,
+    "củ chi": 3,
+    "tây ninh": 4,
+  };
 
-    function renderTable() {
-      const dataBody = document.getElementById('dataBody');
-      const countBody = document.getElementById('countBody');
-      const predictionBody = document.getElementById('predictionBody');
-      const missingBody = document.getElementById('missingBody');
+  rows.forEach((row) => {
+    const code = String(row.code || "").trim().toUpperCase();
+    if (!code) return;
 
-      let countMap = {1:0,2:0,3:0,4:0,5:0,6:0};
-      dataBody.innerHTML = '';
-      dataList.forEach((row, idx) => {
-        const colors = ['#b80000', '#0077b6', '#000'];
-        const cells = Array(6).fill('{}').map((_, i) => {
-          const index = row.indexOf(i + 1);
-          const color = index !== -1 ? colors[index] : '';
-          const value = index !== -1 ? i + 1 : '';
-          if (value) countMap[i + 1]++;
-          return `<td class='number-cell' style="color: ${color}">${value}</td>`;
-        }).join('');
-        dataBody.innerHTML += `<tr>
-          <td>${idx + 1}</td>${cells}
-          <td><button onclick="handleEdit(${idx})" class="btn-edit">x</button></td>
-        </tr>`;
+    if (!grouped.has(code)) {
+      grouped.set(code, {
+        code,
+        size: row.size || "Chưa có kích thước",
+        image: row.image || "",
+        stores: [],
       });
-
-      countBody.innerHTML = '';
-      for(let i=1; i<=6; i++) {
-        countBody.innerHTML += `<tr><td>Ngựa ${i}</td><td>${countMap[i]}</td></tr>`;
-      }
-
-      predictionBody.innerHTML = '';
-      const streaks = calculateStreaks();
-      let anyStreak = false;
-      for(let i=1; i<=6; i++) {
-        if(streaks[i] >= 3) {
-          predictionBody.innerHTML += `<tr><td>Ngựa ${i}</td><td>${streaks[i]} lần</td></tr>`;
-          anyStreak = true;
-        }
-      }
-      if(!anyStreak) {
-        predictionBody.innerHTML = `<tr><td colspan="2">Không có ngựa nổi bật</td></tr>`;
-      }
-
-      missingBody.innerHTML = '';
-      const missings = calculateMissings();
-      let anyMiss = false;
-      for(let i=1; i<=6; i++) {
-        if(missings[i] >= 3) {
-          missingBody.innerHTML += `<tr><td>Ngựa ${i}</td><td>${missings[i]} lượt</td></tr>`;
-          anyMiss = true;
-        }
-      }
-      if(!anyMiss) {
-        missingBody.innerHTML = `<tr><td colspan="2">Không có ngựa vắng 3 lượt</td></tr>`;
-      }
     }
 
-    function handleEdit(idx) {
-      const row = dataList[idx];
-      input.value = row.join('');
-      input.focus();
-      dataList.splice(idx, 1);
-      renderTable();
+    const item = grouped.get(code);
+
+    if ((!item.size || item.size === "Chưa có kích thước") && row.size) {
+      item.size = row.size;
     }
 
-    input.addEventListener('keydown', (e) => {
-      if(e.key === 'Enter') {
-        const val = input.value.trim();
-        if(val.length !== 3) {
-          alert('Vui lòng nhập đúng 3 số từ 1 đến 6.');
-          return;
-        }
-        if(!/^[1-6]{3}$/.test(val)) {
-          alert('Chỉ được nhập số từ 1 đến 6.');
-          return;
-        }
-        const digits = val.split('');
-        if(new Set(digits).size !== 3) {
-          alert('Không được nhập số trùng nhau.');
-          return;
-        }
-        dataList.push(digits.map(Number));
-        input.value = '';
-        renderTable();
-      }
-    });
+    if (!item.image && row.image) {
+      item.image = row.image;
+    }
 
-    function exportToExcel() {
-      if(dataList.length === 0) {
-        alert("Không có dữ liệu để xuất.");
+    const store = String(row.store || "").trim();
+    const area = String(row.area || "").trim();
+    if (store) {
+      const exists = item.stores.some((entry) => entry.store === store && entry.area === area);
+      if (!exists) {
+        item.stores.push({ store, area });
+      }
+    }
+  });
+
+  return Array.from(grouped.values())
+    .map((item) => ({
+      ...item,
+      stores: [...item.stores].sort((a, b) => {
+        const areaA = normalizeText(a.area);
+        const areaB = normalizeText(b.area);
+        const orderA = areaOrder[areaA] ?? 999;
+        const orderB = areaOrder[areaB] ?? 999;
+
+        if (orderA !== orderB) return orderA - orderB;
+        return a.store.localeCompare(b.store, "vi");
+      }),
+    }))
+    .sort((a, b) => a.code.localeCompare(b.code));
+}
+
+export default function TileLookupApp() {
+  const [searchCode, setSearchCode] = useState("");
+  const [searched, setSearched] = useState(false);
+  const [tileData, setTileData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function loadSheetData() {
+      const csvUrl = getGoogleSheetCsvUrl(GOOGLE_SHEET_URL);
+      if (!csvUrl) {
+        setError("Link Google Sheet không hợp lệ");
         return;
       }
-      const ws_data = [];
-      ws_data.push(["Lượt", "Ngựa 1", "Ngựa 2", "Ngựa 3", "Ngựa 4", "Ngựa 5", "Ngựa 6"]);
-      dataList.forEach((row, idx) => {
-        const rowExcel = [idx + 1];
-        for(let horse=1; horse<=6; horse++) {
-          const pos = row.indexOf(horse);
-          rowExcel.push(pos !== -1 ? horse : "");
-        }
-        ws_data.push(rowExcel);
-      });
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.aoa_to_sheet(ws_data);
-      XLSX.utils.book_append_sheet(wb, ws, "Lịch sử đua");
-      XLSX.writeFile(wb, "KetQuaDuaNguar.xlsx");
+
+      try {
+        setLoading(true);
+        setError("");
+        const response = await fetch(csvUrl, { cache: "no-store" });
+        if (!response.ok) throw new Error("Không đọc được dữ liệu từ Google Sheet");
+
+        const text = await response.text();
+        const parsed = csvToRows(text);
+        const mapped = mapSheetRows(parsed);
+        const grouped = groupTiles(mapped);
+
+        if (!grouped.length) throw new Error("Google Sheet chưa có dữ liệu hợp lệ");
+        setTileData(grouped);
+      } catch (e) {
+        setError(e?.message || "Lỗi tải dữ liệu");
+      } finally {
+        setLoading(false);
+      }
     }
 
-    document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
+    loadSheetData();
+  }, []);
 
-    document.getElementById('spinBtn').addEventListener('click', () => {
-      const result = Math.floor(Math.random() * 6) + 1;
-      document.getElementById('spinResult').textContent = `🎲 Kết quả quay: ${result}`;
-    });
+  const chips = useMemo(() => tileData.slice(0, 12), [tileData]);
 
-    renderTable();
-  </script>
-</body>
-</html>
+  const currentResult = useMemo(() => {
+    const normalized = searchCode.trim().toUpperCase();
+    if (!normalized) return null;
+    return tileData.find((item) => item.code === normalized) || null;
+  }, [searchCode, tileData]);
+
+  function handleSearch() {
+    setSearched(true);
+  }
+
+  function handleReset() {
+    setSearchCode("");
+    setSearched(false);
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-200 text-slate-900">
+      <div className="mx-auto max-w-[460px] p-4">
+        <div className="mb-5 flex items-center gap-3">
+          <div className="flex h-14 w-14 items-center justify-center rounded-[18px] bg-gradient-to-br from-blue-600 to-indigo-700 text-[22px] font-bold text-white shadow-lg shadow-blue-500/30">
+            MC
+          </div>
+          <div>
+            <h1 className="m-0 text-[28px] font-bold leading-tight">Tra cứu gạch mẫu</h1>
+            <p className="mt-1 text-sm text-slate-600">Tra cứu nhanh theo mã</p>
+          </div>
+        </div>
+
+        <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-xl shadow-slate-900/5">
+          
+
+          {loading && (
+            <div className="mb-4 rounded-[18px] bg-amber-50 px-4 py-3 text-sm text-amber-700">
+              <div className="flex items-center gap-2">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                Đang tải dữ liệu từ Google Sheets...
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="mb-4 rounded-[18px] bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {error}
+            </div>
+          )}
+
+          <label className="mb-2 block text-sm font-semibold text-slate-700">Nhập mã gạch vào ô bên dưới</label>
+          <div className="flex gap-2.5">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+              <input
+                value={searchCode}
+                onChange={(e) => {
+                  setSearchCode(e.target.value.toUpperCase());
+                  setSearched(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSearch();
+                }}
+                className="w-full rounded-[18px] border border-slate-300 px-4 py-3 pl-11 text-lg outline-none focus:border-slate-500"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleSearch}
+              className="rounded-[18px] bg-gradient-to-r from-blue-600 to-indigo-700 px-5 font-bold text-white shadow-lg shadow-blue-500/20"
+            >
+              Tra cứu
+            </button>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {chips.map((item) => (
+              <button
+                key={item.code}
+                type="button"
+                onClick={() => {
+                  setSearchCode(item.code);
+                  setSearched(true);
+                }}
+                className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm"
+              >
+                {item.code}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-4 overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-xl shadow-slate-900/5">
+          {!currentResult && searched ? (
+            <div className="px-6 py-8 text-center">
+              <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-3xl">
+                🔎
+              </div>
+              <h2 className="text-2xl font-bold">Không tìm thấy mã</h2>
+              <p className="mt-2 text-[15px] leading-6 text-slate-500">Anh/chị kiểm tra lại mã gạch hoặc dữ liệu trong Google Sheet.</p>
+            </div>
+          ) : null}
+
+          {!currentResult && !searched ? (
+            <div className="px-6 py-8 text-center">
+              <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-3xl">
+                🔎
+              </div>
+              <h2 className="text-2xl font-bold">Chưa tra cứu</h2>
+              <p className="mt-2 text-[15px] leading-6 text-slate-500">Nhập mã gạch để xem hình ảnh và nơi đã phát.</p>
+            </div>
+          ) : null}
+
+          {currentResult ? (
+            <>
+              {currentResult.image ? (
+                <div className="flex h-[260px] items-center justify-center border-b border-slate-200 bg-white">
+                  <img
+                    src={currentResult.image}
+                    alt={currentResult.code}
+                    className="h-full w-full object-contain bg-white"
+                    onError={(e) => {
+                      e.currentTarget.src = FALLBACK_IMAGE;
+                    }}
+                  />
+                </div>
+              ) : null}
+
+              <div className="p-4">
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <div>
+                    <p className="mb-1 text-sm text-slate-500">Mã gạch</p>
+                    <h2 className="text-[32px] font-bold leading-none">{currentResult.code}</h2>
+                  </div>
+                  <span className="whitespace-nowrap rounded-full bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700">
+                    {currentResult.stores.length} cửa hàng
+                  </span>
+                </div>
+
+                <p className="mt-3 text-lg font-semibold">{currentResult.size || "Chưa có kích thước"}</p>
+
+                <div className="mt-4 rounded-[18px] bg-gradient-to-r from-blue-600 to-indigo-700 p-4 text-white shadow-lg shadow-blue-500/20">
+                  <p className="mb-1 text-sm text-blue-100">Thông tin phát mẫu</p>
+                  <p className="text-[28px] font-bold">{currentResult.stores.length} nơi đã phát</p>
+                </div>
+
+                
+
+                <div className="mt-2 space-y-1.5">
+                  {currentResult.stores.map((item, index) => (
+                    <div key={`${item.store}-${item.area}-${index}`} className="rounded-[14px] border border-slate-200 bg-white px-3 py-2">
+                      <p className="font-semibold text-slate-900">
+                        {item.store}{item.area ? ` - ${item.area}` : ""}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : null}
+        </div>
+
+        <div className="mt-4 rounded-[24px] border border-dashed border-slate-300 bg-white/70 px-4 py-3 text-center text-sm text-slate-500">
+          Dữ liệu lấy từ Google Sheet
+        </div>
+      </div>
+    </div>
+  );
+}
