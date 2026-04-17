@@ -390,6 +390,7 @@
         image: row.image || row["hình ảnh"] || row["hinh anh"] || row["ảnh"] || row["anh"] || "",
         store: row.store || row["cửa hàng"] || row["cua hang"] || row["tên cửa hàng"] || row["ten cua hang"] || "",
         area: row.area || row["khu vực"] || row["khu vuc"] || row["địa điểm"] || row["dia diem"] || "",
+        date: row.date || row.data || row["ngày"] || row["ngay"] || row["ngày phát"] || row["ngay phat"] || "",
       }));
     }
 
@@ -424,7 +425,7 @@
         if (store) {
           const exists = item.stores.some((entry) => entry.store === store && entry.area === area);
           if (!exists) {
-            item.stores.push({ store, area });
+            item.stores.push({ store, area, date: row.date || row.data || "" });
           }
         }
       });
@@ -490,7 +491,7 @@
 
           <div class="store-list">
             ${currentResult.stores.map((item) => `
-              <div class="store-item">${item.store}${item.area ? ` - ${item.area}` : ""}</div>
+              <div class="store-item">${item.store}${item.area ? ` - ${item.area}` : ""}${item.date ? ` - ${item.date}` : ""}</div>
             `).join("")}
           </div>
         </div>
