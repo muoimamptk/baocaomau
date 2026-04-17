@@ -261,7 +261,7 @@
     <div class="header">
       <div class="icon">MC</div>
       <div>
-        <h1 class="title">Báo Cáo Minh Chiến</h1>
+        <h1 class="title">Baocaomau</h1>
         <p class="subtitle">Tra cứu nhanh theo mã</p>
       </div>
     </div>
@@ -279,12 +279,12 @@
         <button class="btn-primary" id="searchBtn">Tra cứu</button>
       </div>
 
-      <div class="chips" id="chips"></div>
+      
     </div>
 
     <div class="result" id="resultBox"></div>
 
-    <div class="footer">Dữ liệu lấy từ báo cáo thị trường</div>
+    <div class="footer">Dữ liệu lấy từ Google Sheet</div>
   </div>
 
   <script>
@@ -305,7 +305,7 @@
 
     const codeInput = document.getElementById("codeInput");
     const resultBox = document.getElementById("resultBox");
-    const chips = document.getElementById("chips");
+    
     const loadingAlert = document.getElementById("loadingAlert");
     const errorAlert = document.getElementById("errorAlert");
     const searchBtn = document.getElementById("searchBtn");
@@ -444,22 +444,6 @@
         .sort((a, b) => a.code.localeCompare(b.code));
     }
 
-    function renderChips() {
-      chips.innerHTML = "";
-      tileData.slice(0, 12).forEach((item) => {
-        const btn = document.createElement("button");
-        btn.className = "chip";
-        btn.textContent = item.code;
-        btn.onclick = () => {
-          codeInput.value = item.code;
-          searched = true;
-          currentResult = item;
-          renderResult();
-        };
-        chips.appendChild(btn);
-      });
-    }
-
     function renderResult() {
       if (!currentResult && searched) {
         resultBox.innerHTML = `
@@ -547,7 +531,7 @@
         showError(e?.message || "Lỗi tải dữ liệu");
       } finally {
         showLoading(false);
-        renderChips();
+        
         renderResult();
       }
     }
@@ -563,7 +547,7 @@
       renderResult();
     });
 
-    renderChips();
+    
     renderResult();
     loadSheet();
   </script>
