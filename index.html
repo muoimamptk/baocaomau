@@ -1,157 +1,538 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Search, RefreshCw } from "lucide-react";
-
-const GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1s6r-yM4PcE3aczLZwk0r3SVaeJlWWyEsdjYvtup-hWw/edit?usp=sharing";
-const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80";
-
-function normalizeText(text) {
-  return String(text || "").trim().toLowerCase();
-}
-
-function getGoogleSheetCsvUrl(sheetUrl) {
-  if (!sheetUrl) return "";
-  const match = sheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
-  if (!match) return "";
-  const sheetId = match[1];
-  return `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=0`;
-}
-
-function parseCsvLine(line) {
-  const result = [];
-  let current = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i += 1) {
-    const char = line[i];
-    const next = line[i + 1];
-
-    if (char === '"') {
-      if (inQuotes && next === '"') {
-        current += '"';
-        i += 1;
-      } else {
-        inQuotes = !inQuotes;
-      }
-    } else if (char === "," && !inQuotes) {
-      result.push(current.trim());
-      current = "";
-    } else {
-      current += char;
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Baocaomau</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(to bottom, #f8fafc, #e2e8f0);
+      color: #0f172a;
     }
-  }
+    .wrap {
+      max-width: 460px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    .header {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    .icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #2563eb, #4338ca);
+      color: white;
+      font-weight: 700;
+      font-size: 22px;
+      box-shadow: 0 10px 20px rgba(37,99,235,0.25);
+    }
+    .title {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0;
+    }
+    .subtitle {
+      margin: 4px 0 0;
+      color: #475569;
+      font-size: 14px;
+    }
+    .card {
+      background: white;
+      border-radius: 24px;
+      padding: 16px;
+      box-shadow: 0 12px 24px rgba(15,23,42,0.08);
+      border: 1px solid #e2e8f0;
+    }
+    .alert {
+      display: none;
+      border-radius: 18px;
+      padding: 12px 14px;
+      font-size: 14px;
+      margin-bottom: 14px;
+    }
+    .alert.loading {
+      background: #fffbeb;
+      color: #a16207;
+    }
+    .alert.error {
+      background: #fff1f2;
+      color: #be123c;
+    }
+    label {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #334155;
+    }
+    .search-row {
+      display: flex;
+      gap: 10px;
+    }
+    .input-wrap {
+      position: relative;
+      flex: 1;
+    }
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #94a3b8;
+      font-size: 18px;
+      pointer-events: none;
+    }
+    input {
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 18px;
+      padding: 14px 16px 14px 40px;
+      font-size: 18px;
+      outline: none;
+    }
+    input:focus {
+      border-color: #64748b;
+    }
+    button {
+      cursor: pointer;
+      border: none;
+    }
+    .btn-primary {
+      border-radius: 18px;
+      padding: 0 20px;
+      font-weight: 700;
+      color: white;
+      background: linear-gradient(to right, #2563eb, #4338ca);
+      box-shadow: 0 8px 18px rgba(37,99,235,0.2);
+      white-space: nowrap;
+    }
+    .chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    .chip {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 14px;
+      box-shadow: 0 2px 6px rgba(15,23,42,0.05);
+    }
+    .result {
+      margin-top: 18px;
+      overflow: hidden;
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 12px 24px rgba(15,23,42,0.08);
+      border: 1px solid #e2e8f0;
+    }
+    .img-box {
+      width: 100%;
+      height: 260px;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .img-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: white;
+    }
+    .result-body {
+      padding: 16px;
+    }
+    .top-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .muted {
+      color: #64748b;
+      font-size: 14px;
+      margin: 0 0 4px;
+    }
+    .code {
+      font-size: 34px;
+      font-weight: 700;
+      margin: 0;
+    }
+    .stock {
+      background: #ecfdf5;
+      color: #047857;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 14px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .size-box {
+      margin-top: 10px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .info-box {
+      margin-top: 16px;
+      border-radius: 18px;
+      background: linear-gradient(to right, #2563eb, #4338ca);
+      padding: 16px;
+      color: white;
+      box-shadow: 0 10px 20px rgba(37,99,235,0.2);
+    }
+    .info-label {
+      font-size: 13px;
+      color: #dbeafe;
+      margin: 0 0 6px;
+    }
+    .info-value {
+      font-size: 30px;
+      font-weight: 700;
+      margin: 0;
+    }
+    .store-list {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .store-item {
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 10px 12px;
+      font-size: 15px;
+      font-weight: 600;
+      background: white;
+    }
+    .empty {
+      padding: 32px 22px;
+      text-align: center;
+    }
+    .empty-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 999px;
+      background: #f1f5f9;
+      margin: 0 auto 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+    }
+    .empty h2 {
+      margin: 0;
+      font-size: 24px;
+    }
+    .empty p {
+      margin: 8px 0 0;
+      color: #64748b;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    .footer {
+      margin-top: 18px;
+      border: 1px dashed #cbd5e1;
+      border-radius: 24px;
+      padding: 14px;
+      text-align: center;
+      color: #64748b;
+      background: rgba(255,255,255,0.7);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <div class="icon">MC</div>
+      <div>
+        <h1 class="title">Baocaomau</h1>
+        <p class="subtitle">Tra cứu nhanh theo mã</p>
+      </div>
+    </div>
 
-  result.push(current.trim());
-  return result;
-}
+    <div class="card">
+      <div id="loadingAlert" class="alert loading">Đang tải dữ liệu từ Google Sheets...</div>
+      <div id="errorAlert" class="alert error">Không đọc được Google Sheet.</div>
 
-function csvToRows(text) {
-  const lines = String(text || "")
-    .split(String.fromCharCode(10))
-    .map((line) => line.replaceAll(String.fromCharCode(13), "").trim())
-    .filter(Boolean);
+      <label for="codeInput">Nhập mã gạch vào ô bên dưới</label>
+      <div class="search-row">
+        <div class="input-wrap">
+          <div class="search-icon">🔎</div>
+          <input id="codeInput" value="" placeholder="" />
+        </div>
+        <button class="btn-primary" id="searchBtn">Tra cứu</button>
+      </div>
 
-  if (lines.length < 2) return [];
+      <div class="chips" id="chips"></div>
+    </div>
 
-  const headers = parseCsvLine(lines[0]).map((item) => normalizeText(item));
+    <div class="result" id="resultBox"></div>
 
-  return lines.slice(1).map((line) => {
-    const cols = parseCsvLine(line);
-    const row = {};
-    headers.forEach((header, index) => {
-      row[header] = cols[index] || "";
-    });
-    return row;
-  });
-}
+    <div class="footer">Dữ liệu lấy từ Google Sheet</div>
+  </div>
 
-function mapSheetRows(rows) {
-  return rows.map((row) => ({
-    code: row.code || row["mã"] || row["ma"] || row["mã số"] || row["ma so"] || "",
-    size: row.size || row["kích thước"] || row["kich thuoc"] || row["kt"] || "",
-    image: row.image || row["hình ảnh"] || row["hinh anh"] || row["ảnh"] || row["anh"] || "",
-    store: row.store || row["cửa hàng"] || row["cua hang"] || row["tên cửa hàng"] || row["ten cua hang"] || "",
-    area: row.area || row["khu vực"] || row["khu vuc"] || row["địa điểm"] || row["dia diem"] || "",
-  }));
-}
+  <script>
+    const GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1s6r-yM4PcE3aczLZwk0r3SVaeJlWWyEsdjYvtup-hWw/edit?usp=sharing";
+    const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80";
 
-function groupTiles(rows) {
-  const grouped = new Map();
-  const areaOrder = {
-    "đức hoà": 1,
-    "đức hòa": 1,
-    "đức huệ": 2,
-    "củ chi": 3,
-    "tây ninh": 4,
-  };
+    let tileData = [];
+    let currentResult = null;
+    let searched = false;
 
-  rows.forEach((row) => {
-    const code = String(row.code || "").trim().toUpperCase();
-    if (!code) return;
+    const areaOrder = {
+      "đức hoà": 1,
+      "đức hòa": 1,
+      "đức huệ": 2,
+      "củ chi": 3,
+      "tây ninh": 4,
+    };
 
-    if (!grouped.has(code)) {
-      grouped.set(code, {
-        code,
-        size: row.size || "Chưa có kích thước",
-        image: row.image || "",
-        stores: [],
+    const codeInput = document.getElementById("codeInput");
+    const resultBox = document.getElementById("resultBox");
+    const chips = document.getElementById("chips");
+    const loadingAlert = document.getElementById("loadingAlert");
+    const errorAlert = document.getElementById("errorAlert");
+    const searchBtn = document.getElementById("searchBtn");
+
+    function normalizeText(text) {
+      return String(text || "").trim().toLowerCase();
+    }
+
+    function getGoogleSheetCsvUrl(sheetUrl) {
+      if (!sheetUrl) return "";
+      const match = sheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+      if (!match) return "";
+      const sheetId = match[1];
+      return `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=0`;
+    }
+
+    function showLoading(show) {
+      loadingAlert.style.display = show ? "block" : "none";
+    }
+
+    function showError(message) {
+      if (!message) {
+        errorAlert.style.display = "none";
+        return;
+      }
+      errorAlert.textContent = message;
+      errorAlert.style.display = "block";
+    }
+
+    function parseCsvLine(line) {
+      const result = [];
+      let current = "";
+      let inQuotes = false;
+
+      for (let i = 0; i < line.length; i += 1) {
+        const char = line[i];
+        const next = line[i + 1];
+
+        if (char === '"') {
+          if (inQuotes && next === '"') {
+            current += '"';
+            i += 1;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === "," && !inQuotes) {
+          result.push(current.trim());
+          current = "";
+        } else {
+          current += char;
+        }
+      }
+
+      result.push(current.trim());
+      return result;
+    }
+
+    function csvToRows(text) {
+      const lines = String(text || "")
+        .split(String.fromCharCode(10))
+        .map((line) => line.replaceAll(String.fromCharCode(13), "").trim())
+        .filter(Boolean);
+
+      if (lines.length < 2) return [];
+
+      const headers = parseCsvLine(lines[0]).map((item) => normalizeText(item));
+
+      return lines.slice(1).map((line) => {
+        const cols = parseCsvLine(line);
+        const row = {};
+        headers.forEach((header, index) => {
+          row[header] = cols[index] || "";
+        });
+        return row;
       });
     }
 
-    const item = grouped.get(code);
-
-    if ((!item.size || item.size === "Chưa có kích thước") && row.size) {
-      item.size = row.size;
+    function mapSheetRows(rows) {
+      return rows.map((row) => ({
+        code: row.code || row["mã"] || row["ma"] || row["mã số"] || row["ma so"] || "",
+        size: row.size || row["kích thước"] || row["kich thuoc"] || row["kt"] || "",
+        image: row.image || row["hình ảnh"] || row["hinh anh"] || row["ảnh"] || row["anh"] || "",
+        store: row.store || row["cửa hàng"] || row["cua hang"] || row["tên cửa hàng"] || row["ten cua hang"] || "",
+        area: row.area || row["khu vực"] || row["khu vuc"] || row["địa điểm"] || row["dia diem"] || "",
+      }));
     }
 
-    if (!item.image && row.image) {
-      item.image = row.image;
+    function groupTiles(rows) {
+      const grouped = new Map();
+
+      rows.forEach((row) => {
+        const code = String(row.code || "").trim().toUpperCase();
+        if (!code) return;
+
+        if (!grouped.has(code)) {
+          grouped.set(code, {
+            code,
+            size: row.size || "Chưa có kích thước",
+            image: row.image || "",
+            stores: [],
+          });
+        }
+
+        const item = grouped.get(code);
+
+        if ((!item.size || item.size === "Chưa có kích thước") && row.size) {
+          item.size = row.size;
+        }
+
+        if (!item.image && row.image) {
+          item.image = row.image;
+        }
+
+        const store = String(row.store || "").trim();
+        const area = String(row.area || "").trim();
+        if (store) {
+          const exists = item.stores.some((entry) => entry.store === store && entry.area === area);
+          if (!exists) {
+            item.stores.push({ store, area });
+          }
+        }
+      });
+
+      return Array.from(grouped.values())
+        .map((item) => ({
+          ...item,
+          stores: [...item.stores].sort((a, b) => {
+            const areaA = normalizeText(a.area);
+            const areaB = normalizeText(b.area);
+            const orderA = areaOrder[areaA] ?? 999;
+            const orderB = areaOrder[areaB] ?? 999;
+            if (orderA !== orderB) return orderA - orderB;
+            return a.store.localeCompare(b.store, "vi");
+          }),
+        }))
+        .sort((a, b) => a.code.localeCompare(b.code));
     }
 
-    const store = String(row.store || "").trim();
-    const area = String(row.area || "").trim();
-    if (store) {
-      const exists = item.stores.some((entry) => entry.store === store && entry.area === area);
-      if (!exists) {
-        item.stores.push({ store, area });
-      }
+    function renderChips() {
+      chips.innerHTML = "";
+      tileData.slice(0, 12).forEach((item) => {
+        const btn = document.createElement("button");
+        btn.className = "chip";
+        btn.textContent = item.code;
+        btn.onclick = () => {
+          codeInput.value = item.code;
+          searched = true;
+          currentResult = item;
+          renderResult();
+        };
+        chips.appendChild(btn);
+      });
     }
-  });
 
-  return Array.from(grouped.values())
-    .map((item) => ({
-      ...item,
-      stores: [...item.stores].sort((a, b) => {
-        const areaA = normalizeText(a.area);
-        const areaB = normalizeText(b.area);
-        const orderA = areaOrder[areaA] ?? 999;
-        const orderB = areaOrder[areaB] ?? 999;
-
-        if (orderA !== orderB) return orderA - orderB;
-        return a.store.localeCompare(b.store, "vi");
-      }),
-    }))
-    .sort((a, b) => a.code.localeCompare(b.code));
-}
-
-export default function TileLookupApp() {
-  const [searchCode, setSearchCode] = useState("");
-  const [searched, setSearched] = useState(false);
-  const [tileData, setTileData] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    async function loadSheetData() {
-      const csvUrl = getGoogleSheetCsvUrl(GOOGLE_SHEET_URL);
-      if (!csvUrl) {
-        setError("Link Google Sheet không hợp lệ");
+    function renderResult() {
+      if (!currentResult && searched) {
+        resultBox.innerHTML = `
+          <div class="empty">
+            <div class="empty-icon">🔎</div>
+            <h2>Không tìm thấy mã</h2>
+            <p>Anh/chị kiểm tra lại mã gạch hoặc dữ liệu trong Google Sheet.</p>
+          </div>
+        `;
         return;
       }
 
+      if (!currentResult && !searched) {
+        resultBox.innerHTML = `
+          <div class="empty">
+            <div class="empty-icon">🔎</div>
+            <h2>Chưa tra cứu</h2>
+            <p>Nhập mã gạch để xem hình ảnh và nơi đã phát.</p>
+          </div>
+        `;
+        return;
+      }
+
+      resultBox.innerHTML = `
+        ${currentResult.image ? `
+        <div class="img-box">
+          <img id="productImg" src="${currentResult.image}" alt="${currentResult.code}">
+        </div>` : ""}
+        <div class="result-body">
+          <div class="top-row">
+            <div>
+              <p class="muted">Mã gạch</p>
+              <h2 class="code">${currentResult.code}</h2>
+            </div>
+            <span class="stock">${currentResult.stores.length} cửa hàng</span>
+          </div>
+
+          <div class="size-box">${currentResult.size || "Chưa có kích thước"}</div>
+
+          <div class="info-box">
+            <p class="info-label">Thông tin phát mẫu</p>
+            <p class="info-value">${currentResult.stores.length} nơi đã phát</p>
+          </div>
+
+          <div class="store-list">
+            ${currentResult.stores.map((item) => `
+              <div class="store-item">${item.store}${item.area ? ` - ${item.area}` : ""}</div>
+            `).join("")}
+          </div>
+        </div>
+      `;
+
+      const img = document.getElementById("productImg");
+      if (img) {
+        img.onerror = () => {
+          img.src = FALLBACK_IMAGE;
+        };
+      }
+    }
+
+    function handleSearch() {
+      const normalized = codeInput.value.trim().toUpperCase();
+      searched = true;
+      currentResult = tileData.find((item) => item.code === normalized) || null;
+      renderResult();
+    }
+
+    async function loadSheet() {
+      showLoading(true);
+      showError("");
+
       try {
-        setLoading(true);
-        setError("");
-        const response = await fetch(csvUrl, { cache: "no-store" });
+        const response = await fetch(getGoogleSheetCsvUrl(GOOGLE_SHEET_URL), { cache: "no-store" });
         if (!response.ok) throw new Error("Không đọc được dữ liệu từ Google Sheet");
 
         const text = await response.text();
@@ -160,181 +541,31 @@ export default function TileLookupApp() {
         const grouped = groupTiles(mapped);
 
         if (!grouped.length) throw new Error("Google Sheet chưa có dữ liệu hợp lệ");
-        setTileData(grouped);
+        tileData = grouped;
       } catch (e) {
-        setError(e?.message || "Lỗi tải dữ liệu");
+        tileData = [];
+        showError(e?.message || "Lỗi tải dữ liệu");
       } finally {
-        setLoading(false);
+        showLoading(false);
+        renderChips();
+        renderResult();
       }
     }
 
-    loadSheetData();
-  }, []);
+    searchBtn.addEventListener("click", handleSearch);
+    codeInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") handleSearch();
+    });
+    codeInput.addEventListener("input", (e) => {
+      e.target.value = e.target.value.toUpperCase();
+      searched = false;
+      currentResult = null;
+      renderResult();
+    });
 
-  const chips = useMemo(() => tileData.slice(0, 12), [tileData]);
-
-  const currentResult = useMemo(() => {
-    const normalized = searchCode.trim().toUpperCase();
-    if (!normalized) return null;
-    return tileData.find((item) => item.code === normalized) || null;
-  }, [searchCode, tileData]);
-
-  function handleSearch() {
-    setSearched(true);
-  }
-
-  function handleReset() {
-    setSearchCode("");
-    setSearched(false);
-  }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-200 text-slate-900">
-      <div className="mx-auto max-w-[460px] p-4">
-        <div className="mb-5 flex items-center gap-3">
-          <div className="flex h-14 w-14 items-center justify-center rounded-[18px] bg-gradient-to-br from-blue-600 to-indigo-700 text-[22px] font-bold text-white shadow-lg shadow-blue-500/30">
-            MC
-          </div>
-          <div>
-            <h1 className="m-0 text-[28px] font-bold leading-tight">Tra cứu gạch mẫu</h1>
-            <p className="mt-1 text-sm text-slate-600">Tra cứu nhanh theo mã</p>
-          </div>
-        </div>
-
-        <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-xl shadow-slate-900/5">
-          
-
-          {loading && (
-            <div className="mb-4 rounded-[18px] bg-amber-50 px-4 py-3 text-sm text-amber-700">
-              <div className="flex items-center gap-2">
-                <RefreshCw className="h-4 w-4 animate-spin" />
-                Đang tải dữ liệu từ Google Sheets...
-              </div>
-            </div>
-          )}
-
-          {error && (
-            <div className="mb-4 rounded-[18px] bg-rose-50 px-4 py-3 text-sm text-rose-700">
-              {error}
-            </div>
-          )}
-
-          <label className="mb-2 block text-sm font-semibold text-slate-700">Nhập mã gạch vào ô bên dưới</label>
-          <div className="flex gap-2.5">
-            <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
-              <input
-                value={searchCode}
-                onChange={(e) => {
-                  setSearchCode(e.target.value.toUpperCase());
-                  setSearched(false);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSearch();
-                }}
-                className="w-full rounded-[18px] border border-slate-300 px-4 py-3 pl-11 text-lg outline-none focus:border-slate-500"
-              />
-            </div>
-            <button
-              type="button"
-              onClick={handleSearch}
-              className="rounded-[18px] bg-gradient-to-r from-blue-600 to-indigo-700 px-5 font-bold text-white shadow-lg shadow-blue-500/20"
-            >
-              Tra cứu
-            </button>
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            {chips.map((item) => (
-              <button
-                key={item.code}
-                type="button"
-                onClick={() => {
-                  setSearchCode(item.code);
-                  setSearched(true);
-                }}
-                className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm"
-              >
-                {item.code}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-4 overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-xl shadow-slate-900/5">
-          {!currentResult && searched ? (
-            <div className="px-6 py-8 text-center">
-              <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-3xl">
-                🔎
-              </div>
-              <h2 className="text-2xl font-bold">Không tìm thấy mã</h2>
-              <p className="mt-2 text-[15px] leading-6 text-slate-500">Anh/chị kiểm tra lại mã gạch hoặc dữ liệu trong Google Sheet.</p>
-            </div>
-          ) : null}
-
-          {!currentResult && !searched ? (
-            <div className="px-6 py-8 text-center">
-              <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-3xl">
-                🔎
-              </div>
-              <h2 className="text-2xl font-bold">Chưa tra cứu</h2>
-              <p className="mt-2 text-[15px] leading-6 text-slate-500">Nhập mã gạch để xem hình ảnh và nơi đã phát.</p>
-            </div>
-          ) : null}
-
-          {currentResult ? (
-            <>
-              {currentResult.image ? (
-                <div className="flex h-[260px] items-center justify-center border-b border-slate-200 bg-white">
-                  <img
-                    src={currentResult.image}
-                    alt={currentResult.code}
-                    className="h-full w-full object-contain bg-white"
-                    onError={(e) => {
-                      e.currentTarget.src = FALLBACK_IMAGE;
-                    }}
-                  />
-                </div>
-              ) : null}
-
-              <div className="p-4">
-                <div className="mb-3 flex items-start justify-between gap-3">
-                  <div>
-                    <p className="mb-1 text-sm text-slate-500">Mã gạch</p>
-                    <h2 className="text-[32px] font-bold leading-none">{currentResult.code}</h2>
-                  </div>
-                  <span className="whitespace-nowrap rounded-full bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700">
-                    {currentResult.stores.length} cửa hàng
-                  </span>
-                </div>
-
-                <p className="mt-3 text-lg font-semibold">{currentResult.size || "Chưa có kích thước"}</p>
-
-                <div className="mt-4 rounded-[18px] bg-gradient-to-r from-blue-600 to-indigo-700 p-4 text-white shadow-lg shadow-blue-500/20">
-                  <p className="mb-1 text-sm text-blue-100">Thông tin phát mẫu</p>
-                  <p className="text-[28px] font-bold">{currentResult.stores.length} nơi đã phát</p>
-                </div>
-
-                
-
-                <div className="mt-2 space-y-1.5">
-                  {currentResult.stores.map((item, index) => (
-                    <div key={`${item.store}-${item.area}-${index}`} className="rounded-[14px] border border-slate-200 bg-white px-3 py-2">
-                      <p className="font-semibold text-slate-900">
-                        {item.store}{item.area ? ` - ${item.area}` : ""}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </>
-          ) : null}
-        </div>
-
-        <div className="mt-4 rounded-[24px] border border-dashed border-slate-300 bg-white/70 px-4 py-3 text-center text-sm text-slate-500">
-          Dữ liệu lấy từ Google Sheet
-        </div>
-      </div>
-    </div>
-  );
-}
+    renderChips();
+    renderResult();
+    loadSheet();
+  </script>
+</body>
+</html>
