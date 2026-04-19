@@ -219,6 +219,68 @@
       font-weight: 600;
       background: white;
     }
+    .size-button {
+      margin-top: 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: none;
+      border-radius: 14px;
+      padding: 0;
+      font-size: 18px;
+      font-weight: 600;
+      background: transparent;
+      color: #0f172a;
+      cursor: pointer;
+    }
+    .size-button .hint {
+      font-size: 13px;
+      color: #64748b;
+      font-weight: 500;
+    }
+    .related-box {
+      margin-top: 16px;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 14px;
+    }
+    .related-title {
+      margin: 0 0 10px;
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .related-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .related-item {
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      overflow: hidden;
+      background: white;
+      cursor: pointer;
+    }
+    .related-item img {
+      width: 100%;
+      height: 120px;
+      object-fit: contain;
+      background: white;
+      display: block;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .related-item-body {
+      padding: 10px;
+    }
+    .related-code {
+      font-size: 16px;
+      font-weight: 700;
+      margin: 0;
+    }
+    .related-meta {
+      margin-top: 4px;
+      font-size: 13px;
+      color: #64748b;
+    }
     .empty {
       padding: 32px 22px;
       text-align: center;
@@ -254,6 +316,14 @@
       background: rgba(255,255,255,0.7);
       font-size: 14px;
     }
+    
+    
+    
+    
+    
+    
+    
+    
   </style>
 </head>
 <body>
@@ -262,15 +332,15 @@
       <div class="icon">MC</div>
       <div>
         <h1 class="title">Báo Cáo Thị Trường</h1>
-        <p class="subtitle">Tra cứu nhanh theo mã</p>
+        <p class="subtitle">Nhập Mã hoặc kích thướt</p>
       </div>
     </div>
 
     <div class="card">
-      <div id="loadingAlert" class="alert loading">Đang tải dữ liệu từ thị trường</div>
-      <div id="errorAlert" class="alert error">Không đọc được dữ liệu thị trường</div>
+      <div id="loadingAlert" class="alert loading">Đang tải dữ liệu từ Tiền Minh Chiến</div>
+      <div id="errorAlert" class="alert error">Không đọc được data Tiền Minh Chiến</div>
 
-      <label for="codeInput">Mời xếp nhập mã gạch</label>
+      <label for="codeInput">Nhập mã gạch hoặc kích thướt</label>
       <div class="search-row">
         <div class="input-wrap">
           <div class="search-icon">🔎</div>
@@ -284,7 +354,7 @@
 
     <div class="result" id="resultBox"></div>
 
-    <div class="footer">Dữ liệu lấy từ thị trường</div>
+    <div class="footer">Dữ liệu được báo cáo từ Tiền Minh Chiến</div>
   </div>
 
   <script>
@@ -294,6 +364,8 @@
     let tileData = [];
     let currentResult = null;
     let searched = false;
+    let selectedSize = "";
+    let searchMode = "code";
 
     const areaOrder = {
       "đức hoà": 1,
@@ -309,6 +381,7 @@
     const loadingAlert = document.getElementById("loadingAlert");
     const errorAlert = document.getElementById("errorAlert");
     const searchBtn = document.getElementById("searchBtn");
+    
 
     function normalizeText(text) {
       return String(text || "").trim().toLowerCase();
@@ -383,15 +456,38 @@
       });
     }
 
+    function parseDateValue(dateText) {
+      const text = String(dateText || "").trim();
+      if (!text) return 0;
+
+      const parts = text.split(/[\/\-.]/).map((item) => item.trim()).filter(Boolean);
+      if (parts.length !== 3) return 0;
+
+      let day = Number(parts[0]);
+      let month = Number(parts[1]);
+      let year = Number(parts[2]);
+
+      if (!day || !month || !year) return 0;
+      if (year < 100) year += 2000;
+
+      return year * 10000 + month * 100 + day;
+    }
+
     function mapSheetRows(rows) {
-      return rows.map((row) => ({
-        code: row.code || row["mã"] || row["ma"] || row["mã số"] || row["ma so"] || "",
-        size: row.size || row["kích thước"] || row["kich thuoc"] || row["kt"] || "",
-        image: row.image || row["hình ảnh"] || row["hinh anh"] || row["ảnh"] || row["anh"] || "",
-        store: row.store || row["cửa hàng"] || row["cua hang"] || row["tên cửa hàng"] || row["ten cua hang"] || "",
-        area: row.area || row["khu vực"] || row["khu vuc"] || row["địa điểm"] || row["dia diem"] || "",
-        date: row.date || row.data || row["ngày"] || row["ngay"] || row["ngày phát"] || row["ngay phat"] || "",
-      }));
+      return rows.map((row) => {
+        const dateText = row.date || row.data || row["ngày"] || row["ngay"] || row["ngày phát"] || row["ngay phat"] || "";
+
+        return {
+          code: row.code || row["mã"] || row["ma"] || row["mã số"] || row["ma so"] || "",
+          size: row.size || row["kích thước"] || row["kich thuoc"] || row["kt"] || "",
+          price: row.price || row["giá"] || row["gia"] || row["price"] || "",
+          image: row.image || row["hình ảnh"] || row["hinh anh"] || row["ảnh"] || row["anh"] || "",
+          store: row.store || row["cửa hàng"] || row["cua hang"] || row["tên cửa hàng"] || row["ten cua hang"] || "",
+          area: row.area || row["khu vực"] || row["khu vuc"] || row["địa điểm"] || row["dia diem"] || "",
+          date: dateText,
+          dateValue: parseDateValue(dateText),
+        };
+      });
     }
 
     function groupTiles(rows) {
@@ -405,6 +501,8 @@
           grouped.set(code, {
             code,
             size: row.size || "Chưa có kích thước",
+            price: row.price || "",
+            priceDateValue: row.dateValue || 0,
             image: row.image || "",
             stores: [],
           });
@@ -420,12 +518,19 @@
           item.image = row.image;
         }
 
+        if (row.price) {
+          if (!item.price || (row.dateValue || 0) >= (item.priceDateValue || 0)) {
+            item.price = row.price;
+            item.priceDateValue = row.dateValue || 0;
+          }
+        }
+
         const store = String(row.store || "").trim();
         const area = String(row.area || "").trim();
         if (store) {
-          const exists = item.stores.some((entry) => entry.store === store && entry.area === area);
+          const exists = item.stores.some((entry) => entry.store === store && entry.area === area && entry.date === row.date);
           if (!exists) {
-            item.stores.push({ store, area, date: row.date || row.data || "" });
+            item.stores.push({ store, area, date: row.date || "" });
           }
         }
       });
@@ -445,34 +550,119 @@
         .sort((a, b) => a.code.localeCompare(b.code));
     }
 
+    
+
     function renderResult() {
-      if (!currentResult && searched) {
+      if (!currentResult && !selectedSize && searched) {
         resultBox.innerHTML = `
           <div class="empty">
             <div class="empty-icon">🔎</div>
-            <h2>Không tìm thấy mã</h2>
-            <p>Anh/chị kiểm tra lại mã gạch hoặc dữ liệu trong Google Sheet.</p>
+            <h2>Không tìm thấy</h2>
+            <p>Anh/chị kiểm tra lại mã gạch hoặc kích thước trong Google Sheet.</p>
           </div>
         `;
         return;
       }
 
-      if (!currentResult && !searched) {
+      if (!currentResult && !selectedSize && !searched) {
         resultBox.innerHTML = `
           <div class="empty">
             <div class="empty-icon">🔎</div>
             <h2>Chưa tra cứu</h2>
-            <p>Nhập mã gạch để xem hình ảnh và nơi đã phát.</p>
+            <p>Nhập mã gạch hoặc kích thước để xem kết quả.</p>
           </div>
         `;
         return;
       }
 
+      if (!currentResult && selectedSize) {
+        const relatedItems = tileData.filter((item) => normalizeText(item.size) === normalizeText(selectedSize));
+        const relatedHtml = relatedItems.map((item) => {
+          const meta = (item.size || "") + (item.price ? " - " + item.price : "");
+          const image = item.image || FALLBACK_IMAGE;
+          return `
+            <button type="button" class="related-item" data-code="${item.code}">
+              <img src="${image}" alt="${item.code}">
+              <div class="related-item-body">
+                <p class="related-code">${item.code}</p>
+                <div class="related-meta">${meta}</div>
+              </div>
+            </button>
+          `;
+        }).join("");
+
+        resultBox.innerHTML = `
+          <div class="result-body">
+            <div class="top-row">
+              <div>
+                <p class="muted">Kích thước</p>
+                <h2 class="code" style="font-size:28px;">${selectedSize}</h2>
+              </div>
+              <span class="stock">${relatedItems.length} mẫu</span>
+            </div>
+            <div class="related-box" style="margin-top:0; border-top:none; padding-top:0;">
+              <h3 class="related-title">Các mẫu kích thước ${selectedSize}</h3>
+              <div class="related-grid">${relatedHtml}</div>
+            </div>
+          </div>
+        `;
+
+        resultBox.querySelectorAll(".related-item").forEach((button) => {
+          button.addEventListener("click", () => {
+            const code = button.getAttribute("data-code") || "";
+            const found = tileData.find((item) => item.code === code) || null;
+            if (found) {
+              currentResult = found;
+              searched = true;
+              searchMode = "code";
+              codeInput.value = found.code;
+              selectedSize = found.size || "";
+              renderResult();
+            }
+          });
+        });
+        return;
+      }
+
+      const relatedItems = selectedSize
+        ? tileData.filter((item) => normalizeText(item.size) === normalizeText(selectedSize))
+        : [];
+
+      const storesHtml = currentResult.stores.map((item) => {
+        return `<div class="store-item">${item.store}${item.area ? " - " + item.area : ""}${item.date ? " - " + item.date : ""}</div>`;
+      }).join("");
+
+      const relatedHtml = selectedSize
+        ? relatedItems.map((item) => {
+            const meta = (item.size || "") + (item.price ? " - " + item.price : "");
+            const image = item.image || FALLBACK_IMAGE;
+            return `
+              <button type="button" class="related-item" data-code="${item.code}">
+                <img src="${image}" alt="${item.code}">
+                <div class="related-item-body">
+                  <p class="related-code">${item.code}</p>
+                  <div class="related-meta">${meta}</div>
+                </div>
+              </button>
+            `;
+          }).join("")
+        : "";
+
+      const sizeLabel = (currentResult.size || "Chưa có kích thước") + (currentResult.price ? " - " + currentResult.price : "");
+      const imageHtml = currentResult.image
+        ? `<div class="img-box"><img id="productImg" src="${currentResult.image}" alt="${currentResult.code}"></div>`
+        : "";
+      const relatedSection = selectedSize
+        ? `
+          <div class="related-box">
+            <h3 class="related-title">Các mẫu kích thước ${selectedSize}</h3>
+            <div class="related-grid">${relatedHtml}</div>
+          </div>
+        `
+        : "";
+
       resultBox.innerHTML = `
-        ${currentResult.image ? `
-        <div class="img-box">
-          <img id="productImg" src="${currentResult.image}" alt="${currentResult.code}">
-        </div>` : ""}
+        ${imageHtml}
         <div class="result-body">
           <div class="top-row">
             <div>
@@ -482,18 +672,18 @@
             <span class="stock">${currentResult.stores.length} cửa hàng</span>
           </div>
 
-          <div class="size-box">${currentResult.size || "Chưa có kích thước"}</div>
+          <button type="button" class="size-button" id="sizeButton">
+            <span>${sizeLabel}</span>
+            <span class="hint">Xem cùng kích thước</span>
+          </button>
 
           <div class="info-box">
             <p class="info-label">Thông tin phát mẫu</p>
             <p class="info-value">${currentResult.stores.length} nơi đã phát</p>
           </div>
 
-          <div class="store-list">
-            ${currentResult.stores.map((item) => `
-              <div class="store-item">${item.store}${item.area ? ` - ${item.area}` : ""}${item.date ? ` - ${item.date}` : ""}</div>
-            `).join("")}
-          </div>
+          <div class="store-list">${storesHtml}</div>
+          ${relatedSection}
         </div>
       `;
 
@@ -503,12 +693,57 @@
           img.src = FALLBACK_IMAGE;
         };
       }
+
+      const sizeButton = document.getElementById("sizeButton");
+      if (sizeButton) {
+        sizeButton.onclick = () => {
+          selectedSize = currentResult.size || "";
+          searchMode = "size";
+          renderResult();
+        };
+      }
+
+      resultBox.querySelectorAll(".related-item").forEach((button) => {
+        button.addEventListener("click", () => {
+          const code = button.getAttribute("data-code") || "";
+          const found = tileData.find((item) => item.code === code) || null;
+          if (found) {
+            currentResult = found;
+            searched = true;
+            searchMode = "code";
+            codeInput.value = found.code;
+            selectedSize = found.size || "";
+            renderResult();
+          }
+        });
+      });
     }
 
     function handleSearch() {
       const normalized = codeInput.value.trim().toUpperCase();
       searched = true;
-      currentResult = tileData.find((item) => item.code === normalized) || null;
+
+      const byCode = tileData.find((item) => item.code === normalized) || null;
+      if (byCode) {
+        currentResult = byCode;
+        selectedSize = byCode.size || "";
+        searchMode = "code";
+        renderResult();
+        return;
+      }
+
+      const bySize = tileData.filter((item) => normalizeText(item.size) === normalizeText(normalized));
+      if (bySize.length > 0) {
+        currentResult = null;
+        selectedSize = bySize[0].size || normalized;
+        searchMode = "size";
+        renderResult();
+        return;
+      }
+
+      currentResult = null;
+      selectedSize = "";
+      searchMode = "code";
       renderResult();
     }
 
@@ -527,9 +762,11 @@
 
         if (!grouped.length) throw new Error("Google Sheet chưa có dữ liệu hợp lệ");
         tileData = grouped;
+        
       } catch (e) {
         tileData = [];
-        showError(e?.message || "Lỗi tải dữ liệu");
+        
+        showError((e && e.message) || "Lỗi tải dữ liệu");
       } finally {
         showLoading(false);
         
@@ -545,11 +782,13 @@
       e.target.value = e.target.value.toUpperCase();
       searched = false;
       currentResult = null;
+      selectedSize = "";
       renderResult();
     });
 
     
     renderResult();
+    
     loadSheet();
   </script>
 </body>
