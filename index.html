@@ -6,341 +6,79 @@
   <title>Báo Cáo Thị Trường</title>
   <style>
     * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: Arial, Helvetica, sans-serif;
-      background: linear-gradient(to bottom, #f8fafc, #e2e8f0);
-      color: #0f172a;
-    }
-    .wrap {
-      max-width: 460px;
-      margin: 0 auto;
-      padding: 16px;
-    }
-    .header {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      margin-bottom: 18px;
-    }
-    .icon {
-      width: 56px;
-      height: 56px;
-      border-radius: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(135deg, #2563eb, #4338ca);
-      color: white;
-      font-weight: 700;
-      font-size: 22px;
-      box-shadow: 0 10px 20px rgba(37,99,235,0.25);
-    }
-    .title {
-      font-size: 28px;
-      font-weight: 700;
-      margin: 0;
-    }
-    .subtitle {
-      margin: 4px 0 0;
-      color: #475569;
-      font-size: 14px;
-    }
-    .card {
-      background: white;
-      border-radius: 24px;
-      padding: 16px;
-      box-shadow: 0 12px 24px rgba(15,23,42,0.08);
-      border: 1px solid #e2e8f0;
-    }
-    .alert {
-      display: none;
-      border-radius: 18px;
-      padding: 12px 14px;
-      font-size: 14px;
-      margin-bottom: 14px;
-    }
-    .alert.loading {
-      background: #fffbeb;
-      color: #a16207;
-    }
-    .alert.error {
-      background: #fff1f2;
-      color: #be123c;
-    }
-    label {
-      display: block;
-      margin-bottom: 10px;
-      font-size: 14px;
-      font-weight: 600;
-      color: #334155;
-    }
-    .search-row {
-      display: flex;
-      gap: 10px;
-    }
-    .input-wrap {
-      position: relative;
-      flex: 1;
-    }
-    .search-icon {
-      position: absolute;
-      left: 14px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: #94a3b8;
-      font-size: 18px;
-      pointer-events: none;
-    }
-    input {
-      width: 100%;
-      border: 1px solid #cbd5e1;
-      border-radius: 18px;
-      padding: 14px 16px 14px 40px;
-      font-size: 18px;
-      outline: none;
-    }
-    input:focus {
-      border-color: #64748b;
-    }
-    button {
-      cursor: pointer;
-      border: none;
-    }
-    .btn-primary {
-      border-radius: 18px;
-      padding: 0 20px;
-      font-weight: 700;
-      color: white;
-      background: linear-gradient(to right, #2563eb, #4338ca);
-      box-shadow: 0 8px 18px rgba(37,99,235,0.2);
-      white-space: nowrap;
-    }
-    .chips {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 14px;
-    }
-    .chip {
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 999px;
-      padding: 8px 14px;
-      font-size: 14px;
-      box-shadow: 0 2px 6px rgba(15,23,42,0.05);
-    }
-    .result {
-      margin-top: 18px;
-      overflow: hidden;
-      background: white;
-      border-radius: 24px;
-      box-shadow: 0 12px 24px rgba(15,23,42,0.08);
-      border: 1px solid #e2e8f0;
-    }
-    .img-box {
-      width: 100%;
-      height: 260px;
-      background: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-bottom: 1px solid #e2e8f0;
-    }
-    .img-box img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      background: white;
-    }
-    .result-body {
-      padding: 16px;
-    }
-    .top-row {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-    .muted {
-      color: #64748b;
-      font-size: 14px;
-      margin: 0 0 4px;
-    }
-    .code {
-      font-size: 34px;
-      font-weight: 700;
-      margin: 0;
-    }
-    .stock {
-      background: #ecfdf5;
-      color: #047857;
-      border-radius: 999px;
-      padding: 8px 12px;
-      font-size: 14px;
-      font-weight: 700;
-      white-space: nowrap;
-    }
-    .size-box {
-      margin-top: 10px;
-      font-size: 18px;
-      font-weight: 600;
-    }
-    .info-box {
-      margin-top: 16px;
-      border-radius: 18px;
-      background: linear-gradient(to right, #2563eb, #4338ca);
-      padding: 16px;
-      color: white;
-      box-shadow: 0 10px 20px rgba(37,99,235,0.2);
-    }
-    .info-label {
-      font-size: 13px;
-      color: #dbeafe;
-      margin: 0 0 6px;
-    }
-    .info-value {
-      font-size: 30px;
-      font-weight: 700;
-      margin: 0;
-    }
-    .store-list {
-      margin-top: 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    .store-item {
-      border: 1px solid #e2e8f0;
-      border-radius: 14px;
-      padding: 10px 12px;
-      font-size: 15px;
-      font-weight: 600;
-      background: white;
-    }
-    .size-button {
-      margin-top: 10px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      border: none;
-      border-radius: 14px;
-      padding: 0;
-      font-size: 18px;
-      font-weight: 600;
-      background: transparent;
-      color: #0f172a;
-      cursor: pointer;
-    }
-    .size-button .hint {
-      font-size: 13px;
-      color: #64748b;
-      font-weight: 500;
-    }
-    .related-box {
-      margin-top: 16px;
-      border-top: 1px solid #e2e8f0;
-      padding-top: 14px;
-    }
-    .related-title {
-      margin: 0 0 10px;
-      font-size: 16px;
-      font-weight: 700;
-    }
-    .related-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-    }
-    .related-item {
-      border: 1px solid #e2e8f0;
-      border-radius: 16px;
-      overflow: hidden;
-      background: white;
-      cursor: pointer;
-    }
-    .related-item img {
-      width: 100%;
-      height: 120px;
-      object-fit: contain;
-      background: white;
-      display: block;
-      border-bottom: 1px solid #e2e8f0;
-    }
-    .related-item-body {
-      padding: 10px;
-    }
-    .related-code {
-      font-size: 16px;
-      font-weight: 700;
-      margin: 0;
-    }
-    .related-meta {
-      margin-top: 4px;
-      font-size: 13px;
-      color: #64748b;
-    }
-    .empty {
-      padding: 32px 22px;
-      text-align: center;
-    }
-    .empty-icon {
-      width: 64px;
-      height: 64px;
-      border-radius: 999px;
-      background: #f1f5f9;
-      margin: 0 auto 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 28px;
-    }
-    .empty h2 {
-      margin: 0;
-      font-size: 24px;
-    }
-    .empty p {
-      margin: 8px 0 0;
-      color: #64748b;
-      font-size: 15px;
-      line-height: 1.5;
-    }
-    .footer {
-      margin-top: 18px;
-      border: 1px dashed #cbd5e1;
-      border-radius: 24px;
-      padding: 14px;
-      text-align: center;
-      color: #64748b;
-      background: rgba(255,255,255,0.7);
-      font-size: 14px;
-    }
-    
-    
-    
-    
-    
-    
-    
-    
+    body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: linear-gradient(to bottom, #f8fafc, #e2e8f0); color: #0f172a; }
+    .wrap { max-width: 460px; margin: 0 auto; padding: 16px; }
+    .header { display: flex; gap: 12px; align-items: center; margin-bottom: 18px; }
+    .icon { width: 56px; height: 56px; border-radius: 18px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #2563eb, #4338ca); color: white; font-weight: 700; font-size: 22px; box-shadow: 0 10px 20px rgba(37,99,235,0.25); }
+    .title { font-size: 28px; font-weight: 700; margin: 0; }
+    .subtitle { margin: 4px 0 0; color: #475569; font-size: 14px; }
+    .card, .result, .footer-box { background: white; border-radius: 24px; border: 1px solid #e2e8f0; box-shadow: 0 12px 24px rgba(15,23,42,0.08); }
+    .card { padding: 16px; }
+    .footer-box { margin-top: 18px; padding: 14px; text-align: center; color: #64748b; background: rgba(255,255,255,0.7); border-style: dashed; }
+    .alert { display: none; border-radius: 18px; padding: 12px 14px; font-size: 14px; margin-bottom: 14px; }
+    .alert.loading { background: #fffbeb; color: #a16207; }
+    .alert.error { background: #fff1f2; color: #be123c; }
+    label { display: block; margin-bottom: 10px; font-size: 14px; font-weight: 600; color: #334155; }
+    .search-row { display: flex; gap: 10px; }
+    .input-wrap { position: relative; flex: 1; }
+    .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 18px; pointer-events: none; }
+    input { width: 100%; border: 1px solid #cbd5e1; border-radius: 18px; padding: 14px 16px 14px 40px; font-size: 18px; outline: none; }
+    input:focus { border-color: #64748b; }
+    button { cursor: pointer; border: none; font-family: inherit; }
+    .btn-primary { border-radius: 18px; padding: 0 20px; font-weight: 700; color: white; background: linear-gradient(to right, #2563eb, #4338ca); box-shadow: 0 8px 18px rgba(37,99,235,0.2); white-space: nowrap; }
+    .result { margin-top: 18px; overflow: hidden; }
+    .result-body { padding: 16px; }
+    .img-box { width: 100%; height: 260px; background: white; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #e2e8f0; }
+    .img-box img { width: 100%; height: 100%; object-fit: contain; background: white; }
+    .top-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+    .muted { color: #64748b; font-size: 14px; margin: 0 0 4px; }
+    .code { font-size: 34px; font-weight: 700; margin: 0; }
+    .stock { background: #ecfdf5; color: #047857; border-radius: 999px; padding: 8px 12px; font-size: 14px; font-weight: 700; white-space: nowrap; }
+    .info-box { margin-top: 16px; border-radius: 18px; background: linear-gradient(to right, #2563eb, #4338ca); padding: 16px; color: white; box-shadow: 0 10px 20px rgba(37,99,235,0.2); }
+    .info-label { font-size: 13px; color: #dbeafe; margin: 0 0 6px; }
+    .info-value { font-size: 30px; font-weight: 700; margin: 0; }
+    .store-section { margin-top: 14px; }
+    .store-section-title { margin: 0 0 8px; font-size: 15px; font-weight: 700; color: #334155; }
+    .store-list, .store-choice-list { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+    .store-item, .store-choice-btn { border: 1px solid #e2e8f0; border-radius: 14px; padding: 10px 12px; font-size: 15px; font-weight: 600; background: white; width: 100%; text-align: left; }
+    .store-item-name { font-size: 15px; font-weight: 700; color: #0f172a; }
+    .store-item-meta, .store-choice-sub, .contact-line { margin-top: 6px; font-size: 14px; font-weight: 500; color: #475569; line-height: 1.5; }
+    .store-item-gallery { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+    .store-item-thumb { border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: white; }
+    .store-item-thumb img { width: 100%; height: 74px; object-fit: contain; display: block; background: white; }
+    .store-item-thumb-code { padding: 6px 6px 7px; font-size: 12px; font-weight: 700; text-align: center; color: #334155; border-top: 1px solid #e2e8f0; }
+    .size-button { margin-top: 10px; display: inline-flex; align-items: center; gap: 6px; border: none; border-radius: 14px; padding: 0; font-size: 18px; font-weight: 600; background: transparent; color: #0f172a; cursor: pointer; }
+    .size-button .hint { font-size: 13px; color: #64748b; font-weight: 500; }
+    .related-box { margin-top: 16px; border-top: 1px solid #e2e8f0; padding-top: 14px; }
+    .related-title { margin: 0 0 10px; font-size: 16px; font-weight: 700; }
+    .date-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .date-item { border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; background: white; }
+    .date-item-btn { cursor: pointer; padding: 0; text-align: left; width: 100%; }
+    .date-item img { width: 100%; height: 120px; object-fit: contain; background: white; display: block; border-bottom: 1px solid #e2e8f0; }
+    .date-item-body { padding: 10px; }
+    .date-code { font-size: 16px; font-weight: 700; margin: 0; }
+    .date-meta { margin-top: 4px; font-size: 13px; color: #64748b; line-height: 1.4; }
+    .empty { padding: 32px 22px; text-align: center; }
+    .empty-icon { width: 64px; height: 64px; border-radius: 999px; background: #f1f5f9; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+    .empty h2 { margin: 0; font-size: 24px; }
+    .empty p { margin: 8px 0 0; color: #64748b; font-size: 15px; line-height: 1.5; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="header">
-      <div class="icon">MC</div>
+      <div class="icon">M C</div>
       <div>
         <h1 class="title">Báo Cáo Thị Trường</h1>
-        <p class="subtitle">Nhập Mã hoặc kích thướt</p>
+        <p class="subtitle">Tổng Kho Gạch Minh Chiến</p>
       </div>
     </div>
 
     <div class="card">
       <div id="loadingAlert" class="alert loading">Đang tải dữ liệu từ Tiền Minh Chiến</div>
-      <div id="errorAlert" class="alert error">Không đọc được data Tiền Minh Chiến</div>
+      <div id="errorAlert" class="alert error">Không đọc được dữ liệu từ Tiền Minh Chiến</div>
 
-      <label for="codeInput">Nhập mã gạch hoặc kích thướt</label>
+      <label for="codeInput">Nhập mã, ngày, kích thước hoặc tên cửa hàng</label>
       <div class="search-row">
         <div class="input-wrap">
           <div class="search-icon">🔎</div>
@@ -348,13 +86,10 @@
         </div>
         <button class="btn-primary" id="searchBtn">Tra cứu</button>
       </div>
-
-      
     </div>
 
     <div class="result" id="resultBox"></div>
-
-    <div class="footer">Dữ liệu được báo cáo từ Tiền Minh Chiến</div>
+    <div class="footer-box">Dữ liệu lấy từ Tiền Minh Chiến</div>
   </div>
 
   <script>
@@ -362,48 +97,55 @@
     const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80";
 
     let tileData = [];
+    let rawRows = [];
+    let allStores = [];
     let currentResult = null;
     let searched = false;
     let selectedSize = "";
-    let searchMode = "code";
+    let selectedStoreKey = "";
+    let selectedStoreMatches = [];
 
-    const areaOrder = {
-      "đức hoà": 1,
-      "đức hòa": 1,
-      "đức huệ": 2,
-      "củ chi": 3,
-      "tây ninh": 4,
-    };
-
+    const areaOrder = { "đức hoà": 1, "đức hòa": 1, "đức huệ": 2, "củ chi": 3, "tây ninh": 4 };
     const codeInput = document.getElementById("codeInput");
     const resultBox = document.getElementById("resultBox");
-    
     const loadingAlert = document.getElementById("loadingAlert");
     const errorAlert = document.getElementById("errorAlert");
     const searchBtn = document.getElementById("searchBtn");
-    
 
-    function normalizeText(text) {
-      return String(text || "").trim().toLowerCase();
+    function normalizeText(text) { return String(text || "").trim().toLowerCase(); }
+    function toDisplayText(text) {
+      const value = String(text || "").trim().toLowerCase();
+      if (!value) return "";
+      return value.split(" ").filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
     }
-
+    function parseSizeValue(sizeText) {
+      const text = normalizeText(sizeText).replace(/\s+/g, "");
+      const parts = text.split("x");
+      if (parts.length !== 2) return 999999;
+      const a = Number(parts[0]) || 0;
+      const b = Number(parts[1]) || 0;
+      return a * 1000 + b;
+    }
+    function parseDateValue(dateText) {
+      const text = String(dateText || "").trim();
+      if (!text) return 0;
+      const parts = text.split(/[\/\-.]/).map((i) => i.trim()).filter(Boolean);
+      if (parts.length !== 3) return 0;
+      let day = Number(parts[0]);
+      let month = Number(parts[1]);
+      let year = Number(parts[2]);
+      if (!day || !month || !year) return 0;
+      if (year < 100) year += 2000;
+      return year * 10000 + month * 100 + day;
+    }
     function getGoogleSheetCsvUrl(sheetUrl) {
-      if (!sheetUrl) return "";
-      const match = sheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+      const match = String(sheetUrl || "").match(/\/d\/([a-zA-Z0-9-_]+)/);
       if (!match) return "";
-      const sheetId = match[1];
-      return `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=0`;
+      return `https://docs.google.com/spreadsheets/d/${match[1]}/gviz/tq?tqx=out:csv&gid=0`;
     }
-
-    function showLoading(show) {
-      loadingAlert.style.display = show ? "block" : "none";
-    }
-
+    function showLoading(show) { loadingAlert.style.display = show ? "block" : "none"; }
     function showError(message) {
-      if (!message) {
-        errorAlert.style.display = "none";
-        return;
-      }
+      if (!message) { errorAlert.style.display = "none"; return; }
       errorAlert.textContent = message;
       errorAlert.style.display = "block";
     }
@@ -412,18 +154,12 @@
       const result = [];
       let current = "";
       let inQuotes = false;
-
       for (let i = 0; i < line.length; i += 1) {
         const char = line[i];
         const next = line[i + 1];
-
         if (char === '"') {
-          if (inQuotes && next === '"') {
-            current += '"';
-            i += 1;
-          } else {
-            inQuotes = !inQuotes;
-          }
+          if (inQuotes && next === '"') { current += '"'; i += 1; }
+          else { inQuotes = !inQuotes; }
         } else if (char === "," && !inQuotes) {
           result.push(current.trim());
           current = "";
@@ -431,191 +167,251 @@
           current += char;
         }
       }
-
       result.push(current.trim());
       return result;
     }
 
     function csvToRows(text) {
-      const lines = String(text || "")
-        .split(String.fromCharCode(10))
-        .map((line) => line.replaceAll(String.fromCharCode(13), "").trim())
-        .filter(Boolean);
-
+      const lines = String(text || "").split(String.fromCharCode(10)).map((line) => line.replaceAll(String.fromCharCode(13), "").trim()).filter(Boolean);
       if (lines.length < 2) return [];
-
       const headers = parseCsvLine(lines[0]).map((item) => normalizeText(item));
-
       return lines.slice(1).map((line) => {
         const cols = parseCsvLine(line);
         const row = {};
-        headers.forEach((header, index) => {
-          row[header] = cols[index] || "";
-        });
+        headers.forEach((header, index) => { row[header] = cols[index] || ""; });
         return row;
       });
-    }
-
-    function parseDateValue(dateText) {
-      const text = String(dateText || "").trim();
-      if (!text) return 0;
-
-      const parts = text.split(/[\/\-.]/).map((item) => item.trim()).filter(Boolean);
-      if (parts.length !== 3) return 0;
-
-      let day = Number(parts[0]);
-      let month = Number(parts[1]);
-      let year = Number(parts[2]);
-
-      if (!day || !month || !year) return 0;
-      if (year < 100) year += 2000;
-
-      return year * 10000 + month * 100 + day;
     }
 
     function mapSheetRows(rows) {
       return rows.map((row) => {
         const dateText = row.date || row.data || row["ngày"] || row["ngay"] || row["ngày phát"] || row["ngay phat"] || "";
-
         return {
           code: row.code || row["mã"] || row["ma"] || row["mã số"] || row["ma so"] || "",
           size: row.size || row["kích thước"] || row["kich thuoc"] || row["kt"] || "",
           price: row.price || row["giá"] || row["gia"] || row["price"] || "",
+          quantity: Number(row.quantity || row["số lượng"] || row["so luong"] || 1) || 1,
           image: row.image || row["hình ảnh"] || row["hinh anh"] || row["ảnh"] || row["anh"] || "",
           store: row.store || row["cửa hàng"] || row["cua hang"] || row["tên cửa hàng"] || row["ten cua hang"] || "",
           area: row.area || row["khu vực"] || row["khu vuc"] || row["địa điểm"] || row["dia diem"] || "",
+          phone: row.phone || row["sđt"] || row["sdt"] || row["số điện thoại"] || row["so dien thoai"] || "",
+          address: row.address || row["địa chỉ nhà"] || row["dia chi nha"] || row["địa chỉ"] || row["dia chi"] || "",
           date: dateText,
           dateValue: parseDateValue(dateText),
         };
       });
     }
 
+    function sortStoresList(list) {
+      return [...list].sort((a, b) => {
+        const orderA = areaOrder[normalizeText(a.area)] ?? 999;
+        const orderB = areaOrder[normalizeText(b.area)] ?? 999;
+        if (orderA !== orderB) return orderA - orderB;
+        return a.store.localeCompare(b.store, "vi");
+      });
+    }
+
+    function buildAllStores(rows) {
+      const map = new Map();
+      rows.forEach((row) => {
+        const store = String(row.store || "").trim();
+        const area = String(row.area || "").trim();
+        if (!store) return;
+        const key = `${normalizeText(store)}|||${normalizeText(area)}`;
+        if (!map.has(key)) map.set(key, { store: toDisplayText(store), area: toDisplayText(area) });
+      });
+      return sortStoresList(Array.from(map.values()));
+    }
+
     function groupTiles(rows) {
       const grouped = new Map();
-
       rows.forEach((row) => {
         const code = String(row.code || "").trim().toUpperCase();
         if (!code) return;
-
-        if (!grouped.has(code)) {
-          grouped.set(code, {
-            code,
-            size: row.size || "Chưa có kích thước",
-            price: row.price || "",
-            priceDateValue: row.dateValue || 0,
-            image: row.image || "",
-            stores: [],
-          });
-        }
-
+        if (!grouped.has(code)) grouped.set(code, { code, size: row.size || "Chưa có kích thước", price: row.price || "", priceDateValue: row.dateValue || 0, image: row.image || "", stores: [] });
         const item = grouped.get(code);
-
-        if ((!item.size || item.size === "Chưa có kích thước") && row.size) {
-          item.size = row.size;
-        }
-
-        if (!item.image && row.image) {
-          item.image = row.image;
-        }
-
-        if (row.price) {
-          if (!item.price || (row.dateValue || 0) >= (item.priceDateValue || 0)) {
-            item.price = row.price;
-            item.priceDateValue = row.dateValue || 0;
-          }
-        }
-
+        if ((!item.size || item.size === "Chưa có kích thước") && row.size) item.size = row.size;
+        if (!item.image && row.image) item.image = row.image;
+        if (row.price && (!item.price || (row.dateValue || 0) >= (item.priceDateValue || 0))) { item.price = row.price; item.priceDateValue = row.dateValue || 0; }
         const store = String(row.store || "").trim();
         const area = String(row.area || "").trim();
         if (store) {
-          const exists = item.stores.some((entry) => entry.store === store && entry.area === area && entry.date === row.date);
-          if (!exists) {
-            item.stores.push({ store, area, date: row.date || "" });
-          }
+          const ns = normalizeText(store);
+          const na = normalizeText(area);
+          const exists = item.stores.some((entry) => normalizeText(entry.store) === ns && normalizeText(entry.area) === na && entry.date === row.date);
+          if (!exists) item.stores.push({ store: toDisplayText(store), area: toDisplayText(area), date: row.date || "" });
         }
       });
-
-      return Array.from(grouped.values())
-        .map((item) => ({
-          ...item,
-          stores: [...item.stores].sort((a, b) => {
-            const areaA = normalizeText(a.area);
-            const areaB = normalizeText(b.area);
-            const orderA = areaOrder[areaA] ?? 999;
-            const orderB = areaOrder[areaB] ?? 999;
-            if (orderA !== orderB) return orderA - orderB;
-            return a.store.localeCompare(b.store, "vi");
-          }),
-        }))
-        .sort((a, b) => a.code.localeCompare(b.code));
+      return Array.from(grouped.values()).map((item) => ({ ...item, stores: sortStoresList(item.stores) })).sort((a, b) => a.code.localeCompare(b.code));
     }
 
-    
+    function groupDateStores(rows) {
+      const grouped = new Map();
+      rows.forEach((entry) => {
+        const store = String(entry.store || "").trim();
+        const area = String(entry.area || "").trim();
+        if (!store) return;
+        const key = `${normalizeText(store)}|||${normalizeText(area)}`;
+        if (!grouped.has(key)) grouped.set(key, { store: toDisplayText(store), area: toDisplayText(area), totalCodes: 0, sizes: new Map(), codeMap: new Map() });
+        const item = grouped.get(key);
+        const qty = Math.max(1, Number(entry.quantity) || 1);
+        const size = String(entry.size || "").trim() || "Chưa có kích thước";
+        const codeLower = String(entry.code || "").trim().toLowerCase();
+        const codeUpper = String(entry.code || "").trim().toUpperCase();
+        item.totalCodes += 1;
+        if (!item.sizes.has(size)) item.sizes.set(size, { size, quantity: 0, codes: [] });
+        const sizeItem = item.sizes.get(size);
+        sizeItem.quantity += qty;
+        if (codeLower) sizeItem.codes.push(codeLower);
+        if (codeUpper && !item.codeMap.has(codeUpper)) item.codeMap.set(codeUpper, { code: codeUpper, image: entry.image || "" });
+      });
+      return Array.from(grouped.values()).map((item) => ({ ...item, sizes: Array.from(item.sizes.values()), codes: Array.from(item.codeMap.values()) })).sort((a, b) => {
+        if (b.totalCodes !== a.totalCodes) return b.totalCodes - a.totalCodes;
+        const areaA = areaOrder[normalizeText(a.area)] ?? 999;
+        const areaB = areaOrder[normalizeText(b.area)] ?? 999;
+        if (areaA !== areaB) return areaA - areaB;
+        return a.store.localeCompare(b.store, "vi");
+      });
+    }
+
+    function buildDateStoreHtml(item) {
+      const lines = item.sizes.map((sizeItem) => `${sizeItem.quantity} viên ${sizeItem.size}: ${sizeItem.codes.join(", ")}`).join("<br>");
+      const galleryHtml = (item.codes || []).map((codeItem) => {
+        const image = codeItem.image || FALLBACK_IMAGE;
+        return `<div class="store-item-thumb"><img src="${image}" alt="${codeItem.code}"><div class="store-item-thumb-code">${codeItem.code}</div></div>`;
+      }).join("");
+      return `<div class="store-item"><div class="store-item-name">${item.store}${item.area ? ` - ${item.area}` : ""}</div><div class="store-item-meta">Đã phát<br>${lines}</div>${galleryHtml ? `<div class="store-item-gallery">${galleryHtml}</div>` : ""}</div>`;
+    }
+
+    function buildStoreInventory(storeKey) {
+      const rows = rawRows.filter((entry) => `${normalizeText(entry.store)}|||${normalizeText(entry.area)}` === storeKey);
+      if (!rows.length) return null;
+
+      const latestRow = [...rows].sort((a, b) => (b.dateValue || 0) - (a.dateValue || 0))[0];
+      const latestPhone = latestRow && latestRow.phone ? latestRow.phone : "đang cập nhật";
+      const latestAddress = latestRow && latestRow.address ? latestRow.address : "đang cập nhật";
+
+      const byCode = new Map();
+      rows.forEach((entry) => {
+        const code = String(entry.code || "").trim().toUpperCase();
+        if (!code) return;
+        if (!byCode.has(code)) byCode.set(code, { code, size: entry.size || "Chưa có kích thước", image: entry.image || "" });
+      });
+      const bySize = new Map();
+      Array.from(byCode.values()).forEach((item) => {
+        const size = item.size || "Chưa có kích thước";
+        if (!bySize.has(size)) bySize.set(size, []);
+        bySize.get(size).push(item);
+      });
+      const sizes = Array.from(bySize.entries())
+        .map(([size, items]) => ({ size, items: items.sort((a, b) => a.code.localeCompare(b.code)) }))
+        .sort((a, b) => parseSizeValue(a.size) - parseSizeValue(b.size));
+      const first = rows[0];
+      return {
+        store: toDisplayText(first.store || ""),
+        area: toDisplayText(first.area || ""),
+        phone: latestPhone,
+        address: latestAddress,
+        sizes,
+      };
+    }
+
+    function renderStoreInventory(inventory) {
+      const sectionsHtml = inventory.sizes.map((group) => {
+        const itemsHtml = group.items.map((item) => {
+          const image = item.image || FALLBACK_IMAGE;
+          return `<div class="date-item"><img src="${image}" alt="${item.code}"><div class="date-item-body"><p class="date-code">${item.code}</p><div class="date-meta">${group.size}</div></div></div>`;
+        }).join("");
+        return `<div class="related-box" style="margin-top:14px;"><h3 class="related-title">${group.size}</h3><div class="date-grid">${itemsHtml}</div></div>`;
+      }).join("");
+      const totalCodes = inventory.sizes.reduce((sum, group) => sum + group.items.length, 0);
+      resultBox.innerHTML = `
+        <div class="result-body">
+          <div class="top-row">
+            <div>
+              <p class="muted">Cửa hàng</p>
+              <h2 class="code" style="font-size:28px;">${inventory.store}</h2>
+            </div>
+            <span class="stock">${inventory.area}</span>
+          </div>
+          <div class="contact-line"><strong>SĐT:</strong> ${inventory.phone && inventory.phone !== "đang cập nhật" ? `<a href="tel:${inventory.phone}" style="color:#2563eb; font-weight:700; text-decoration:none;">${inventory.phone}</a>` : "đang cập nhật"}</div>
+          <div class="contact-line"><strong>Địa chỉ:</strong> ${inventory.address && inventory.address !== "đang cập nhật" ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(inventory.address)}" target="_blank" style="color:#2563eb; font-weight:700; text-decoration:none;">${inventory.address}</a>` : "đang cập nhật"}</div>
+          <div class="info-box">
+            <p class="info-label">Mẩu đang giữ</p>
+            <p class="info-value">${totalCodes} mẩu</p>
+          </div>
+          ${sectionsHtml || '<div class="store-item">Chưa có dữ liệu</div>'}
+        </div>
+      `;
+    }
 
     function renderResult() {
-      if (!currentResult && !selectedSize && searched) {
-        resultBox.innerHTML = `
-          <div class="empty">
-            <div class="empty-icon">🔎</div>
-            <h2>Không tìm thấy</h2>
-            <p>Anh/chị kiểm tra lại mã gạch hoặc kích thước trong Google Sheet.</p>
-          </div>
-        `;
-        return;
-      }
-
-      if (!currentResult && !selectedSize && !searched) {
-        resultBox.innerHTML = `
-          <div class="empty">
-            <div class="empty-icon">🔎</div>
-            <h2>Chưa tra cứu</h2>
-            <p>Nhập mã gạch hoặc kích thước để xem kết quả.</p>
-          </div>
-        `;
-        return;
-      }
-
-      if (!currentResult && selectedSize) {
-        const relatedItems = tileData.filter((item) => normalizeText(item.size) === normalizeText(selectedSize));
-        const relatedHtml = relatedItems.map((item) => {
-          const meta = (item.size || "") + (item.price ? " - " + item.price : "");
-          const image = item.image || FALLBACK_IMAGE;
-          return `
-            <button type="button" class="related-item" data-code="${item.code}">
-              <img src="${image}" alt="${item.code}">
-              <div class="related-item-body">
-                <p class="related-code">${item.code}</p>
-                <div class="related-meta">${meta}</div>
-              </div>
-            </button>
-          `;
+      if (!currentResult && !selectedSize && !selectedStoreKey && selectedStoreMatches.length > 0) {
+        const listHtml = selectedStoreMatches.map((item) => {
+          const key = `${normalizeText(item.store)}|||${normalizeText(item.area)}`;
+          return `<button type="button" class="store-choice-btn" data-store-key="${key}">${item.store}<span class="store-choice-sub">${item.area || "Chưa có khu vực"}</span></button>`;
         }).join("");
+        resultBox.innerHTML = `<div class="result-body"><div class="top-row"><div><p class="muted">Chọn cửa hàng</p><h2 class="code" style="font-size:28px;">${codeInput.value.trim()}</h2></div><span class="stock">${selectedStoreMatches.length} cửa hàng</span></div><div class="store-choice-list">${listHtml}</div></div>`;
+        resultBox.querySelectorAll('.store-choice-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            selectedStoreKey = btn.getAttribute('data-store-key') || '';
+            selectedStoreMatches = [];
+            renderResult();
+          });
+        });
+        return;
+      }
 
-        resultBox.innerHTML = `
-          <div class="result-body">
-            <div class="top-row">
-              <div>
-                <p class="muted">Kích thước</p>
-                <h2 class="code" style="font-size:28px;">${selectedSize}</h2>
-              </div>
-              <span class="stock">${relatedItems.length} mẫu</span>
-            </div>
-            <div class="related-box" style="margin-top:0; border-top:none; padding-top:0;">
-              <h3 class="related-title">Các mẫu kích thước ${selectedSize}</h3>
-              <div class="related-grid">${relatedHtml}</div>
-            </div>
-          </div>
-        `;
-
-        resultBox.querySelectorAll(".related-item").forEach((button) => {
-          button.addEventListener("click", () => {
-            const code = button.getAttribute("data-code") || "";
+      if (!currentResult && !selectedSize && !selectedStoreKey && searched) {
+        resultBox.innerHTML = `<div class="empty"><div class="empty-icon">🔎</div><h2>Không tìm thấy</h2><p>Anh/chị kiểm tra lại mã gạch, ngày, kích thước hoặc tên cửa hàng.</p></div>`;
+        return;
+      }
+      if (!currentResult && !selectedSize && !selectedStoreKey && !searched) {
+        resultBox.innerHTML = `<div class="empty"><div class="empty-icon">🔎</div><h2>Chưa tra cứu</h2><p>Nhập mã gạch(w24204), ngày(06-04-26), kích thước (60x60) hoặc tên cửa hàng để xem kết quả.</p></div>`;
+        return;
+      }
+      if (!currentResult && selectedStoreKey) {
+        const inventory = buildStoreInventory(selectedStoreKey);
+        if (!inventory) {
+          resultBox.innerHTML = `<div class="empty"><div class="empty-icon">🔎</div><h2>Không có dữ liệu cửa hàng</h2><p>Chưa tìm thấy mã nào ở cửa hàng này.</p></div>`;
+          return;
+        }
+        renderStoreInventory(inventory);
+        return;
+      }
+      if (!currentResult && selectedSize) {
+        const dateItems = rawRows.filter((entry) => normalizeText(entry.date) === normalizeText(selectedSize));
+        if (dateItems.length > 0) {
+          const dateStores = groupDateStores(dateItems);
+          const storeHtml = dateStores.map((item) => buildDateStoreHtml(item)).join("");
+          const dailyCodeMap = new Map();
+          dateItems.forEach((entry) => {
+            const code = String(entry.code || "").trim().toUpperCase();
+            if (!code) return;
+            if (!dailyCodeMap.has(code)) dailyCodeMap.set(code, { code, size: entry.size || "", image: entry.image || "" });
+          });
+          const dailyGallery = Array.from(dailyCodeMap.values()).map((item) => {
+            const image = item.image || FALLBACK_IMAGE;
+            return `<div class="date-item"><img src="${image}" alt="${item.code}"><div class="date-item-body"><p class="date-code">${item.code}</p><div class="date-meta">${item.size || ""}</div></div></div>`;
+          }).join("");
+          resultBox.innerHTML = `<div class="result-body"><div class="top-row"><div><p class="muted">Ngày phát</p><h2 class="code" style="font-size:28px;">${selectedSize}</h2></div><span class="stock">${dateStores.length} cửa hàng</span></div><div class="related-box" style="margin-top:0; border-top:none; padding-top:0;"><h3 class="related-title">Các mã đã phát</h3><div class="date-grid">${dailyGallery || '<div class="store-item">Chưa có dữ liệu</div>'}</div></div><div class="info-box" style="margin-top:12px;"><p class="info-label">Tổng số cửa hàng</p><p class="info-value">${dateStores.length} cửa hàng</p></div><div class="store-section"><h3 class="store-section-title">Cửa hàng đã phát</h3><div class="store-list">${storeHtml || '<div class="store-item">Chưa có dữ liệu</div>'}</div></div></div>`;
+          return;
+        }
+        const sizeItems = tileData.filter((entry) => normalizeText(entry.size) === normalizeText(selectedSize));
+        const sizeHtml = sizeItems.map((entry) => {
+          const image = entry.image || FALLBACK_IMAGE;
+          const meta = (entry.size || "") + (entry.price ? " - " + entry.price : "");
+          return `<button type="button" class="date-item date-item-btn" data-code="${entry.code}"><img src="${image}" alt="${entry.code}"><div class="date-item-body"><p class="date-code">${entry.code}</p><div class="date-meta">${meta}</div></div></button>`;
+        }).join("");
+        resultBox.innerHTML = `<div class="result-body"><div class="top-row"><div><p class="muted">Kích thước</p><h2 class="code" style="font-size:28px;">${selectedSize}</h2></div><span class="stock">${sizeItems.length} mẫu</span></div><div class="related-box" style="margin-top:0; border-top:none; padding-top:0;"><h3 class="related-title">Các mẫu kích thước ${selectedSize}</h3><div class="date-grid">${sizeHtml || '<div class="store-item">Không có mẫu nào</div>'}</div></div></div>`;
+        resultBox.querySelectorAll('.date-item-btn[data-code]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const code = btn.getAttribute('data-code') || '';
             const found = tileData.find((item) => item.code === code) || null;
             if (found) {
               currentResult = found;
-              searched = true;
-              searchMode = "code";
-              codeInput.value = found.code;
+              selectedStoreKey = "";
+              selectedStoreMatches = [];
               selectedSize = found.size || "";
               renderResult();
             }
@@ -623,111 +419,68 @@
         });
         return;
       }
-
-      const relatedItems = selectedSize
-        ? tileData.filter((item) => normalizeText(item.size) === normalizeText(selectedSize))
-        : [];
-
-      const storesHtml = currentResult.stores.map((item) => {
-        return `<div class="store-item">${item.store}${item.area ? " - " + item.area : ""}${item.date ? " - " + item.date : ""}</div>`;
-      }).join("");
-
-      const relatedHtml = selectedSize
-        ? relatedItems.map((item) => {
-            const meta = (item.size || "") + (item.price ? " - " + item.price : "");
-            const image = item.image || FALLBACK_IMAGE;
-            return `
-              <button type="button" class="related-item" data-code="${item.code}">
-                <img src="${image}" alt="${item.code}">
-                <div class="related-item-body">
-                  <p class="related-code">${item.code}</p>
-                  <div class="related-meta">${meta}</div>
-                </div>
-              </button>
-            `;
-          }).join("")
-        : "";
-
+      const issuedStores = currentResult.stores || [];
+      const issuedKeys = new Set(issuedStores.map((entry) => `${normalizeText(entry.store)}|||${normalizeText(entry.area)}`));
+      const unissuedStores = allStores.filter((entry) => !issuedKeys.has(`${normalizeText(entry.store)}|||${normalizeText(entry.area)}`));
+      const issuedHtml = issuedStores.map((entry) => `<div class="store-item">${entry.store}${entry.area ? " - " + entry.area : ""}${entry.date ? " - " + entry.date : ""}</div>`).join("");
+      const unissuedHtml = unissuedStores.map((entry) => `<div class="store-item">${entry.store}${entry.area ? " - " + entry.area : ""}</div>`).join("");
       const sizeLabel = (currentResult.size || "Chưa có kích thước") + (currentResult.price ? " - " + currentResult.price : "");
-      const imageHtml = currentResult.image
-        ? `<div class="img-box"><img id="productImg" src="${currentResult.image}" alt="${currentResult.code}"></div>`
-        : "";
-      const relatedSection = selectedSize
-        ? `
-          <div class="related-box">
-            <h3 class="related-title">Các mẫu kích thước ${selectedSize}</h3>
-            <div class="related-grid">${relatedHtml}</div>
-          </div>
-        `
-        : "";
-
-      resultBox.innerHTML = `
-        ${imageHtml}
-        <div class="result-body">
-          <div class="top-row">
-            <div>
-              <p class="muted">Mã gạch</p>
-              <h2 class="code">${currentResult.code}</h2>
-            </div>
-            <span class="stock">${currentResult.stores.length} cửa hàng</span>
-          </div>
-
-          <button type="button" class="size-button" id="sizeButton">
-            <span>${sizeLabel}</span>
-            <span class="hint">Xem cùng kích thước</span>
-          </button>
-
-          <div class="info-box">
-            <p class="info-label">Thông tin phát mẫu</p>
-            <p class="info-value">${currentResult.stores.length} nơi đã phát</p>
-          </div>
-
-          <div class="store-list">${storesHtml}</div>
-          ${relatedSection}
-        </div>
-      `;
-
+      const imageHtml = currentResult.image ? `<div class="img-box"><img id="productImg" src="${currentResult.image}" alt="${currentResult.code}"></div>` : "";
+      resultBox.innerHTML = `${imageHtml}<div class="result-body"><div class="top-row"><div><p class="muted">Mã gạch</p><h2 class="code">${currentResult.code}</h2></div><span class="stock">${issuedStores.length} cửa hàng</span></div><button type="button" class="size-button" id="sizeButton"><span>${sizeLabel}</span><span class="hint">Xem cùng kích thước</span></button><div class="info-box"><p class="info-label">Thông tin phát mẫu</p><p class="info-value">${issuedStores.length} nơi đã phát</p></div><div class="store-section"><h3 class="store-section-title">Cửa hàng đã phát</h3><div class="store-list">${issuedHtml || '<div class="store-item">Chưa có dữ liệu</div>'}</div></div><div class="info-box" style="margin-top:12px;"><p class="info-label">Cửa hàng chưa phát</p><p class="info-value">${unissuedStores.length} nơi chưa phát</p></div><div class="store-section"><h3 class="store-section-title">Cửa hàng chưa phát</h3><div class="store-list">${unissuedHtml || '<div class="store-item">Không còn cửa hàng nào</div>'}</div></div></div>`;
       const img = document.getElementById("productImg");
-      if (img) {
-        img.onerror = () => {
-          img.src = FALLBACK_IMAGE;
-        };
-      }
-
+      if (img) img.onerror = () => { img.src = FALLBACK_IMAGE; };
       const sizeButton = document.getElementById("sizeButton");
       if (sizeButton) {
         sizeButton.onclick = () => {
-          selectedSize = currentResult.size || "";
-          searchMode = "size";
+          selectedStoreKey = "";
+          selectedStoreMatches = [];
+          selectedSize = currentResult ? currentResult.size : "";
+          currentResult = null;
           renderResult();
         };
       }
-
-      resultBox.querySelectorAll(".related-item").forEach((button) => {
-        button.addEventListener("click", () => {
-          const code = button.getAttribute("data-code") || "";
-          const found = tileData.find((item) => item.code === code) || null;
-          if (found) {
-            currentResult = found;
-            searched = true;
-            searchMode = "code";
-            codeInput.value = found.code;
-            selectedSize = found.size || "";
-            renderResult();
-          }
-        });
-      });
     }
 
     function handleSearch() {
-      const normalized = codeInput.value.trim().toUpperCase();
+      const raw = codeInput.value.trim();
+      const normalized = raw.toUpperCase();
+      const normText = normalizeText(raw);
       searched = true;
 
       const byCode = tileData.find((item) => item.code === normalized) || null;
       if (byCode) {
         currentResult = byCode;
+        selectedStoreKey = "";
+        selectedStoreMatches = [];
         selectedSize = byCode.size || "";
-        searchMode = "code";
+        renderResult();
+        return;
+      }
+
+      const matchedStores = allStores.filter((s) => normalizeText(s.store).includes(normText));
+      if (normText && matchedStores.length === 1) {
+        currentResult = null;
+        selectedSize = "";
+        selectedStoreMatches = [];
+        selectedStoreKey = `${normalizeText(matchedStores[0].store)}|||${normalizeText(matchedStores[0].area)}`;
+        renderResult();
+        return;
+      }
+      if (normText && matchedStores.length > 1) {
+        currentResult = null;
+        selectedSize = "";
+        selectedStoreKey = "";
+        selectedStoreMatches = matchedStores;
+        renderResult();
+        return;
+      }
+
+      const byDate = rawRows.filter((item) => normalizeText(item.date) === normalizeText(normalized));
+      if (byDate.length > 0) {
+        currentResult = null;
+        selectedStoreKey = "";
+        selectedStoreMatches = [];
+        selectedSize = byDate[0].date || normalized;
         renderResult();
         return;
       }
@@ -735,60 +488,57 @@
       const bySize = tileData.filter((item) => normalizeText(item.size) === normalizeText(normalized));
       if (bySize.length > 0) {
         currentResult = null;
+        selectedStoreKey = "";
+        selectedStoreMatches = [];
         selectedSize = bySize[0].size || normalized;
-        searchMode = "size";
         renderResult();
         return;
       }
 
       currentResult = null;
+      selectedStoreKey = "";
+      selectedStoreMatches = [];
       selectedSize = "";
-      searchMode = "code";
       renderResult();
     }
 
     async function loadSheet() {
       showLoading(true);
       showError("");
-
       try {
         const response = await fetch(getGoogleSheetCsvUrl(GOOGLE_SHEET_URL), { cache: "no-store" });
         if (!response.ok) throw new Error("Không đọc được dữ liệu từ Google Sheet");
-
         const text = await response.text();
         const parsed = csvToRows(text);
         const mapped = mapSheetRows(parsed);
         const grouped = groupTiles(mapped);
-
         if (!grouped.length) throw new Error("Google Sheet chưa có dữ liệu hợp lệ");
         tileData = grouped;
-        
+        rawRows = mapped;
+        allStores = buildAllStores(mapped);
       } catch (e) {
         tileData = [];
-        
+        rawRows = [];
+        allStores = [];
         showError((e && e.message) || "Lỗi tải dữ liệu");
       } finally {
         showLoading(false);
-        
         renderResult();
       }
     }
 
     searchBtn.addEventListener("click", handleSearch);
-    codeInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") handleSearch();
-    });
-    codeInput.addEventListener("input", (e) => {
-      e.target.value = e.target.value.toUpperCase();
+    codeInput.addEventListener("keydown", (e) => { if (e.key === "Enter") handleSearch(); });
+    codeInput.addEventListener("input", () => {
       searched = false;
       currentResult = null;
+      selectedStoreKey = "";
+      selectedStoreMatches = [];
       selectedSize = "";
       renderResult();
     });
 
-    
     renderResult();
-    
     loadSheet();
   </script>
 </body>
