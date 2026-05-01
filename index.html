@@ -75,6 +75,9 @@
     .inventory-note { margin-top: 8px; font-size: 13px; color: #64748b; line-height: 1.4; }
     .tonkho-tools { display: flex; gap: 10px; margin-bottom: 12px; }
     .tonkho-tools select, .tonkho-tools input { border: 1px solid #cbd5e1; border-radius: 14px; padding: 10px 12px; font-size: 15px; outline: none; width: 100%; }
+    .tonkho-tools { display: grid; grid-template-columns: 1fr; gap: 10px; }
+    .tonkho-search-row { display: grid; grid-template-columns: 1fr 84px; gap: 8px; }
+    .tonkho-search-btn { border-radius: 14px; padding: 10px 8px; font-weight: 700; color: white; background: linear-gradient(to right, #2563eb, #4338ca); }
     .tonkho-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
     .tonkho-card { background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 12px; }
     .tonkho-label { margin: 0 0 4px; color: #64748b; font-size: 12px; }
@@ -280,12 +283,84 @@
       `;
     }
     let tonKhoFilterMode = "all";
+    let tonKhoKeywordValue = "";
 
     function getTonKhoFilteredRows() {
       const brandSelect = document.getElementById("tonKhoBrand");
       const keywordInput = document.getElementById("tonKhoKeyword");
       const selectedBrand = brandSelect ? brandSelect.value : "ALL";
       const keyword = keywordInput ? normalizeText(keywordInput.value) : "";
+
+      let rows = tonKhoData;
+      if (selectedBrand && selectedBrand !== "ALL") rows = rows.filter(r => r.brand === selectedBrand);
+      if (keyword) rows = rows.filter(r => normalizeText(r.code).includes(keyword) || normalizeText(r.name).includes(keyword));
+
+      if (tonKhoFilterMode === "low") {
+        rows = rows.filter(r => r.ton > 0 && r.ton <= 10).sort((a, b) => a.ton - b.ton);
+      } else if (tonKhoFilterMode === "high") {
+        rows = [...rows].sort((a, b) => b.ton - a.ton);
+      } else if (tonKhoFilterMode === "sale") {
+        rows = [...rows].sort((a, b) => b.xuat - a.xuat);
+      } else {
+        rows = [...rows].sort((a, b) => b.ton - a.ton);
+      }
+
+      return rows;
+    }
+
+    function updateTonKhoContent() {
+      const rows = getTonKhoFilteredRows();
+      const sum = key => rows.reduce((s, r) => s + Number(r[key] || 0), 0);
+      const topRows = rows.slice(0, 60);
+
+      const countEl = document.getElementById("tonKhoCount");
+      if (countEl) countEl.textContent = rows.length + " mã";
+
+      const modeTitle = {
+        all: "Danh sách tồn kho",
+        high: "Hàng tồn nhiều",
+        low: "Hàng tồn thấp",
+        sale: "Hàng bán chạy"
+      }[tonKhoFilterMode] || "Danh sách tồn kho";
+
+      const titleEl = document.getElementById("tonKhoModeTitle");
+      if (titleEl) titleEl.textContent = modeTitle;
+
+      const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = formatNumber(value);
+      };
+
+      setText("sumDauKy", sum("dauKy"));
+      setText("sumTon", sum("ton"));
+      setText("sumNhap", sum("nhap"));
+      setText("sumXuat", sum("xuat"));
+      setText("sumThung", sum("thung"));
+      setText("sumVien", sum("vien"));
+
+      const tbody = document.getElementById("tonKhoTableBody");
+      if (!tbody) return;
+
+      tbody.innerHTML = topRows.map(r => {
+        const tonClass = r.ton <= 10 ? "low-stock" : r.ton >= 500 ? "high-stock" : "";
+        return '<tr>' +
+          '<td>' + (r.brand || "") + '</td>' +
+          '<td><strong>' + r.code + '</strong></td>' +
+          '<td>' + (r.name || "") + '</td>' +
+          '<td>' + formatNumber(r.nhap) + '</td>' +
+          '<td>' + formatNumber(r.xuat) + '</td>' +
+          '<td class="' + tonClass + '">' + formatNumber(r.ton) + '</td>' +
+          '<td>' + formatNumber(r.thung) + '</td>' +
+          '<td>' + formatNumber(r.vien) + '</td>' +
+          '<td>' + formatNumber(r.tienVon) + '</td>' +
+        '</tr>';
+      }).join("") || '<tr><td colspan="9">Chưa có dữ liệu tồn kho</td></tr>';
+    }
+
+    function getTonKhoFilteredRows() {
+      const brandSelect = document.getElementById("tonKhoBrand");
+      const selectedBrand = brandSelect ? brandSelect.value : "ALL";
+      const keyword = normalizeText(tonKhoKeywordValue);
 
       let rows = tonKhoData;
       if (selectedBrand && selectedBrand !== "ALL") rows = rows.filter(r => r.brand === selectedBrand);
@@ -376,7 +451,10 @@
 
           '<div class="tonkho-tools">' +
             '<select id="tonKhoBrand">' + brandOptions + '</select>' +
-            '<input id="tonKhoKeyword" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" placeholder="Tìm mã hoặc tên hàng" />' +
+            '<div class="tonkho-search-row">' +
+              '<input id="tonKhoKeyword" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" placeholder="Tìm mã hoặc tên hàng" />' +
+              '<button type="button" class="tonkho-search-btn" id="tonKhoSearchBtn">Tìm</button>' +
+            '</div>' +
           '</div>' +
 
           '<div class="tonkho-summary">' +
@@ -410,7 +488,20 @@
       document.getElementById("tonKhoBrand").onchange = updateTonKhoContent;
 
       const inputEl = document.getElementById("tonKhoKeyword");
-      inputEl.oninput = updateTonKhoContent;
+      inputEl.value = tonKhoKeywordValue;
+
+      document.getElementById("tonKhoSearchBtn").onclick = () => {
+        tonKhoKeywordValue = inputEl.value;
+        updateTonKhoContent();
+      };
+
+      inputEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          tonKhoKeywordValue = inputEl.value;
+          updateTonKhoContent();
+          inputEl.blur();
+        }
+      });
 
       updateTonKhoContent();
     }
