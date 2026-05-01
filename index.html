@@ -62,6 +62,29 @@
     .empty-icon { width: 64px; height: 64px; border-radius: 999px; background: #f1f5f9; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
     .empty h2 { margin: 0; font-size: 24px; }
     .empty p { margin: 8px 0 0; color: #64748b; font-size: 15px; line-height: 1.5; }
+
+    .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .tab-btn { border-radius: 18px; padding: 12px 10px; font-weight: 700; background: white; color: #334155; border: 1px solid #cbd5e1; box-shadow: 0 6px 14px rgba(15,23,42,0.06); }
+    .tab-btn.active { color: white; background: linear-gradient(to right, #2563eb, #4338ca); border: none; }
+    .inventory-mini { margin-top: 14px; border-radius: 18px; background: #f8fafc; border: 1px solid #dbeafe; padding: 14px; }
+    .inventory-title { margin: 0 0 10px; font-size: 16px; font-weight: 700; color: #0f172a; }
+    .inventory-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .inventory-kpi { border-radius: 14px; padding: 10px; background: white; border: 1px solid #e2e8f0; }
+    .inventory-kpi-label { margin: 0 0 4px; font-size: 12px; color: #64748b; }
+    .inventory-kpi-value { margin: 0; font-size: 20px; font-weight: 700; color: #0f172a; }
+    .inventory-note { margin-top: 8px; font-size: 13px; color: #64748b; line-height: 1.4; }
+    .tonkho-tools { display: flex; gap: 10px; margin-bottom: 12px; }
+    .tonkho-tools select, .tonkho-tools input { border: 1px solid #cbd5e1; border-radius: 14px; padding: 10px 12px; font-size: 15px; outline: none; width: 100%; }
+    .tonkho-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+    .tonkho-card { background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 12px; }
+    .tonkho-label { margin: 0 0 4px; color: #64748b; font-size: 12px; }
+    .tonkho-value { margin: 0; font-size: 22px; font-weight: 700; color: #0f172a; }
+    .tonkho-table-wrap { overflow: auto; border: 1px solid #e2e8f0; border-radius: 16px; background: white; max-height: 520px; }
+    .tonkho-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 760px; }
+    .tonkho-table th, .tonkho-table td { padding: 9px 10px; border-bottom: 1px solid #e2e8f0; text-align: left; white-space: nowrap; }
+    .tonkho-table th { background: #f1f5f9; position: sticky; top: 0; z-index: 1; }
+    .low-stock { color: #be123c; font-weight: 700; }
+    .high-stock { color: #047857; font-weight: 700; }
   </style>
 </head>
 <body>
@@ -74,7 +97,12 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="tabs">
+      <button class="tab-btn active" id="tabMarketBtn" type="button">🔎 Tra cứu</button>
+      <button class="tab-btn" id="tabStockBtn" type="button">📦 Tồn kho</button>
+    </div>
+
+    <div class="card" id="searchCard">
       <div id="loadingAlert" class="alert loading">Đang tải dữ liệu từ Tiền Minh Chiến</div>
       <div id="errorAlert" class="alert error">Không đọc được dữ liệu từ Tiền Minh Chiến</div>
 
@@ -89,7 +117,8 @@
     </div>
 
     <div class="result" id="resultBox"></div>
-    <div class="footer-box">Dữ liệu lấy từ Tiền Minh Chiến</div>
+    <div class="result" id="tonKhoBox" style="display:none;"></div>
+    <div class="footer-box" id="footerBox">Dữ liệu lấy từ Tiền Minh Chiến</div>
   </div>
 
   <script>
@@ -97,6 +126,7 @@
     const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80";
 
     let tileData = [];
+    let tonKhoData = [];
     let rawRows = [];
     let allStores = [];
     let currentResult = null;
@@ -104,6 +134,7 @@
     let selectedSize = "";
     let selectedStoreKey = "";
     let selectedStoreMatches = [];
+    let inventoryResultCode = "";
 
     const areaOrder = { "đức hoà": 1, "đức hòa": 1, "đức huệ": 2, "củ chi": 3, "tây ninh": 4 };
     const codeInput = document.getElementById("codeInput");
@@ -111,6 +142,11 @@
     const loadingAlert = document.getElementById("loadingAlert");
     const errorAlert = document.getElementById("errorAlert");
     const searchBtn = document.getElementById("searchBtn");
+    const tabMarketBtn = document.getElementById("tabMarketBtn");
+    const tabStockBtn = document.getElementById("tabStockBtn");
+    const searchCard = document.getElementById("searchCard");
+    const tonKhoBox = document.getElementById("tonKhoBox");
+    const footerBox = document.getElementById("footerBox");
 
     function normalizeText(text) { return String(text || "").trim().toLowerCase(); }
     function toDisplayText(text) {
@@ -143,6 +179,182 @@
       if (!match) return "";
       return `https://docs.google.com/spreadsheets/d/${match[1]}/gviz/tq?tqx=out:csv&gid=0`;
     }
+
+    function getGoogleSheetId(sheetUrl) {
+      const match = String(sheetUrl || "").match(/\/d\/([a-zA-Z0-9-_]+)/);
+      return match ? match[1] : "";
+    }
+    function getTonKhoJsonUrl(sheetUrl) {
+      const id = getGoogleSheetId(sheetUrl);
+      return id ? `https://opensheet.elk.sh/${id}/${encodeURIComponent("TỒN KHO")}` : "";
+    }
+    function parseNumberFlexible(value) {
+      let text = String(value || "").trim().replace(/\./g, "").replace(/,/g, ".");
+      if (/^\(.+\)$/.test(text)) text = "-" + text.slice(1, -1);
+      const n = Number(text);
+      return Number.isFinite(n) ? n : 0;
+    }
+    function pick(row, names) {
+      for (const name of names) {
+        if (row[name] !== undefined) return row[name];
+        const found = Object.keys(row).find(k => normalizeText(k) === normalizeText(name));
+        if (found) return row[found];
+      }
+      return "";
+    }
+    function mapTonKhoRows(rows) {
+      return rows.map((row) => ({
+        brand: pick(row, ["Hãng", "Hang"]),
+        code: String(pick(row, ["Mã hàng", "Ma hang", "Mã", "Ma"]) || "").trim().toUpperCase(),
+        name: pick(row, ["Tên hàng", "Ten hang", "Tên", "Ten"]),
+        dauKy: parseNumberFlexible(pick(row, ["Đầu kỳ", "Dau ky"])),
+        nhap: parseNumberFlexible(pick(row, ["Nhập", "Nhap"])),
+        xuat: parseNumberFlexible(pick(row, ["Xuất", "Xuat"])),
+        ton: parseNumberFlexible(pick(row, ["Tồn", "Ton"])),
+        giaVon: parseNumberFlexible(pick(row, ["Giá vốn", "Gia von"])),
+        thung: parseNumberFlexible(pick(row, ["Thùng", "Thung"])),
+        vien: parseNumberFlexible(pick(row, ["Viên", "Vien"])),
+        tienVon: parseNumberFlexible(pick(row, ["Tiền vốn", "Tien von"])),
+      })).filter(row => row.code && row.code !== "MÃ HÀNG" && row.name);
+    }
+    function findInventoryByCode(code) {
+      const normalized = String(code || "").trim().toUpperCase();
+      return tonKhoData.find(row => row.code === normalized) || null;
+    }
+    function formatNumber(value) {
+      return Number(value || 0).toLocaleString("vi-VN");
+    }
+    async function loadTonKho() {
+      try {
+        const url = getTonKhoJsonUrl(GOOGLE_SHEET_URL);
+        if (!url) return;
+        const response = await fetch(url, { cache: "no-store" });
+        if (!response.ok) throw new Error("Không đọc được sheet TỒN KHO");
+        const json = await response.json();
+        tonKhoData = mapTonKhoRows(json);
+      } catch (e) {
+        tonKhoData = [];
+        console.error("Lỗi tải tồn kho:", e);
+      }
+    }
+    function renderInventoryMini(code) {
+      const item = findInventoryByCode(code);
+      if (!item) {
+        return `<div class="inventory-mini"><h3 class="inventory-title">📦 Tồn kho</h3><div class="inventory-note">Chưa có mã này trong sheet TỒN KHO.</div></div>`;
+      }
+      const tonClass = item.ton <= 10 ? "low-stock" : item.ton >= 500 ? "high-stock" : "";
+      return `
+        <div class="inventory-mini">
+          <h3 class="inventory-title">📦 Tồn kho hiện tại</h3>
+          <div class="inventory-grid">
+            <div class="inventory-kpi"><p class="inventory-kpi-label">Hãng</p><p class="inventory-kpi-value" style="font-size:18px;">${item.brand || "—"}</p></div>
+            <div class="inventory-kpi"><p class="inventory-kpi-label">Tồn</p><p class="inventory-kpi-value ${tonClass}">${formatNumber(item.ton)}</p></div>
+            <div class="inventory-kpi"><p class="inventory-kpi-label">Thùng</p><p class="inventory-kpi-value">${formatNumber(item.thung)}</p></div>
+            <div class="inventory-kpi"><p class="inventory-kpi-label">Viên</p><p class="inventory-kpi-value">${formatNumber(item.vien)}</p></div>
+            <div class="inventory-kpi"><p class="inventory-kpi-label">Nhập</p><p class="inventory-kpi-value">${formatNumber(item.nhap)}</p></div>
+            <div class="inventory-kpi"><p class="inventory-kpi-label">Xuất</p><p class="inventory-kpi-value">${formatNumber(item.xuat)}</p></div>
+          </div>
+          <div class="inventory-note">${item.name || ""}</div>
+        </div>
+      `;
+    }
+    function renderInventoryOnly(code) {
+      const item = findInventoryByCode(code);
+      if (!item) return;
+      resultBox.innerHTML = `
+        <div class="result-body">
+          <div class="top-row">
+            <div>
+              <p class="muted">Mã hàng trong kho</p>
+              <h2 class="code">${item.code}</h2>
+            </div>
+            <span class="stock">${item.brand || "Tồn kho"}</span>
+          </div>
+          <div class="contact-line"><strong>Tên hàng:</strong> ${item.name || ""}</div>
+          ${renderInventoryMini(item.code)}
+        </div>
+      `;
+    }
+    function renderTonKhoDashboard() {
+      const brandList = Array.from(new Set(tonKhoData.map(r => r.brand).filter(Boolean))).sort((a, b) => a.localeCompare(b, "vi"));
+      const brandSelect = document.getElementById("tonKhoBrand");
+      const keywordInput = document.getElementById("tonKhoKeyword");
+      const selectedBrand = brandSelect ? brandSelect.value : "ALL";
+      const keyword = keywordInput ? normalizeText(keywordInput.value) : "";
+
+      let rows = tonKhoData;
+      if (selectedBrand && selectedBrand !== "ALL") rows = rows.filter(r => r.brand === selectedBrand);
+      if (keyword) rows = rows.filter(r => normalizeText(r.code).includes(keyword) || normalizeText(r.name).includes(keyword));
+
+      const sum = key => rows.reduce((s, r) => s + Number(r[key] || 0), 0);
+      const topRows = [...rows].sort((a, b) => b.ton - a.ton).slice(0, 60);
+
+      const brandOptions = `<option value="ALL">Tất cả hãng</option>` + brandList.map(b => `<option value="${b}" ${b === selectedBrand ? "selected" : ""}>${b}</option>`).join("");
+      const tableHtml = topRows.map(r => {
+        const tonClass = r.ton <= 10 ? "low-stock" : r.ton >= 500 ? "high-stock" : "";
+        return `<tr>
+          <td>${r.brand || ""}</td>
+          <td><strong>${r.code}</strong></td>
+          <td>${r.name || ""}</td>
+          <td>${formatNumber(r.nhap)}</td>
+          <td>${formatNumber(r.xuat)}</td>
+          <td class="${tonClass}">${formatNumber(r.ton)}</td>
+          <td>${formatNumber(r.thung)}</td>
+          <td>${formatNumber(r.vien)}</td>
+          <td>${formatNumber(r.tienVon)}</td>
+        </tr>`;
+      }).join("");
+
+      tonKhoBox.innerHTML = `
+        <div class="result-body">
+          <div class="top-row">
+            <div>
+              <p class="muted">Dashboard</p>
+              <h2 class="code" style="font-size:28px;">Tồn kho</h2>
+            </div>
+            <span class="stock">${rows.length} mã</span>
+          </div>
+
+          <div class="tonkho-tools">
+            <select id="tonKhoBrand">${brandOptions}</select>
+            <input id="tonKhoKeyword" value="${keywordInput ? keywordInput.value : ""}" placeholder="Tìm mã hoặc tên hàng" />
+          </div>
+
+          <div class="tonkho-summary">
+            <div class="tonkho-card"><p class="tonkho-label">Tổng đầu kỳ</p><p class="tonkho-value">${formatNumber(sum("dauKy"))}</p></div>
+            <div class="tonkho-card"><p class="tonkho-label">Tổng tồn</p><p class="tonkho-value">${formatNumber(sum("ton"))}</p></div>
+            <div class="tonkho-card"><p class="tonkho-label">Tổng nhập</p><p class="tonkho-value">${formatNumber(sum("nhap"))}</p></div>
+            <div class="tonkho-card"><p class="tonkho-label">Tổng xuất</p><p class="tonkho-value">${formatNumber(sum("xuat"))}</p></div>
+            <div class="tonkho-card"><p class="tonkho-label">Tổng thùng</p><p class="tonkho-value">${formatNumber(sum("thung"))}</p></div>
+            <div class="tonkho-card"><p class="tonkho-label">Tổng viên</p><p class="tonkho-value">${formatNumber(sum("vien"))}</p></div>
+          </div>
+
+          <h3 class="related-title">Top tồn nhiều / danh sách tồn kho</h3>
+          <div class="tonkho-table-wrap">
+            <table class="tonkho-table">
+              <thead>
+                <tr><th>Hãng</th><th>Mã</th><th>Tên hàng</th><th>Nhập</th><th>Xuất</th><th>Tồn</th><th>Thùng</th><th>Viên</th><th>Tiền vốn</th></tr>
+              </thead>
+              <tbody>${tableHtml || '<tr><td colspan="9">Chưa có dữ liệu tồn kho</td></tr>'}</tbody>
+            </table>
+          </div>
+        </div>
+      `;
+
+      document.getElementById("tonKhoBrand").onchange = renderTonKhoDashboard;
+      document.getElementById("tonKhoKeyword").oninput = renderTonKhoDashboard;
+    }
+    function switchTab(tab) {
+      const isStock = tab === "stock";
+      tabMarketBtn.classList.toggle("active", !isStock);
+      tabStockBtn.classList.toggle("active", isStock);
+      searchCard.style.display = isStock ? "none" : "block";
+      resultBox.style.display = isStock ? "none" : "block";
+      tonKhoBox.style.display = isStock ? "block" : "none";
+      footerBox.textContent = isStock ? "Dữ liệu tồn kho lấy từ sheet TỒN KHO" : "Dữ liệu lấy từ Tiền Minh Chiến";
+      if (isStock) renderTonKhoDashboard();
+    }
+
     function showLoading(show) { loadingAlert.style.display = show ? "block" : "none"; }
     function showError(message) {
       if (!message) { errorAlert.style.display = "none"; return; }
@@ -346,6 +558,10 @@
     }
 
     function renderResult() {
+      if (!currentResult && inventoryResultCode) {
+        renderInventoryOnly(inventoryResultCode);
+        return;
+      }
       if (!currentResult && !selectedSize && !selectedStoreKey && selectedStoreMatches.length > 0) {
         const listHtml = selectedStoreMatches.map((item) => {
           const key = `${normalizeText(item.store)}|||${normalizeText(item.area)}`;
@@ -426,7 +642,8 @@
       const unissuedHtml = unissuedStores.map((entry) => `<div class="store-item">${entry.store}${entry.area ? " - " + entry.area : ""}</div>`).join("");
       const sizeLabel = (currentResult.size || "Chưa có kích thước") + (currentResult.price ? " - " + currentResult.price : "");
       const imageHtml = currentResult.image ? `<div class="img-box"><img id="productImg" src="${currentResult.image}" alt="${currentResult.code}"></div>` : "";
-      resultBox.innerHTML = `${imageHtml}<div class="result-body"><div class="top-row"><div><p class="muted">Mã gạch</p><h2 class="code">${currentResult.code}</h2></div><span class="stock">${issuedStores.length} cửa hàng</span></div><button type="button" class="size-button" id="sizeButton"><span>${sizeLabel}</span><span class="hint">Xem cùng kích thước</span></button><div class="info-box"><p class="info-label">Thông tin phát mẫu</p><p class="info-value">${issuedStores.length} nơi đã phát</p></div><div class="store-section"><h3 class="store-section-title">Cửa hàng đã phát</h3><div class="store-list">${issuedHtml || '<div class="store-item">Chưa có dữ liệu</div>'}</div></div><div class="info-box" style="margin-top:12px;"><p class="info-label">Cửa hàng chưa phát</p><p class="info-value">${unissuedStores.length} nơi chưa phát</p></div><div class="store-section"><h3 class="store-section-title">Cửa hàng chưa phát</h3><div class="store-list">${unissuedHtml || '<div class="store-item">Không còn cửa hàng nào</div>'}</div></div></div>`;
+      const inventoryHtml = renderInventoryMini(currentResult.code);
+      resultBox.innerHTML = `${imageHtml}<div class="result-body"><div class="top-row"><div><p class="muted">Mã gạch</p><h2 class="code">${currentResult.code}</h2></div><span class="stock">${issuedStores.length} cửa hàng</span></div><button type="button" class="size-button" id="sizeButton"><span>${sizeLabel}</span><span class="hint">Xem cùng kích thước</span></button>${inventoryHtml}<div class="info-box"><p class="info-label">Thông tin phát mẫu</p><p class="info-value">${issuedStores.length} nơi đã phát</p></div><div class="store-section"><h3 class="store-section-title">Cửa hàng đã phát</h3><div class="store-list">${issuedHtml || '<div class="store-item">Chưa có dữ liệu</div>'}</div></div><div class="info-box" style="margin-top:12px;"><p class="info-label">Cửa hàng chưa phát</p><p class="info-value">${unissuedStores.length} nơi chưa phát</p></div><div class="store-section"><h3 class="store-section-title">Cửa hàng chưa phát</h3><div class="store-list">${unissuedHtml || '<div class="store-item">Không còn cửa hàng nào</div>'}</div></div></div>`;
       const img = document.getElementById("productImg");
       if (img) img.onerror = () => { img.src = FALLBACK_IMAGE; };
       const sizeButton = document.getElementById("sizeButton");
@@ -446,6 +663,7 @@
       const normalized = raw.toUpperCase();
       const normText = normalizeText(raw);
       searched = true;
+      inventoryResultCode = "";
 
       const byCode = tileData.find((item) => item.code === normalized) || null;
       if (byCode) {
@@ -453,6 +671,16 @@
         selectedStoreKey = "";
         selectedStoreMatches = [];
         selectedSize = byCode.size || "";
+        renderResult();
+        return;
+      }
+
+      if (findInventoryByCode(normalized)) {
+        currentResult = null;
+        selectedStoreKey = "";
+        selectedStoreMatches = [];
+        selectedSize = "";
+        inventoryResultCode = normalized;
         renderResult();
         return;
       }
@@ -499,6 +727,7 @@
       selectedStoreKey = "";
       selectedStoreMatches = [];
       selectedSize = "";
+      inventoryResultCode = "";
       renderResult();
     }
 
@@ -538,8 +767,13 @@
       renderResult();
     });
 
+    tabMarketBtn.addEventListener("click", () => switchTab("market"));
+    tabStockBtn.addEventListener("click", () => switchTab("stock"));
+
     renderResult();
-    loadSheet();
+    Promise.all([loadSheet(), loadTonKho()]).then(() => {
+      renderResult();
+    });
   </script>
 </body>
 </html>
