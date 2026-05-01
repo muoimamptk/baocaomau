@@ -85,6 +85,10 @@
     .tonkho-table th { background: #f1f5f9; position: sticky; top: 0; z-index: 1; }
     .low-stock { color: #be123c; font-weight: 700; }
     .high-stock { color: #047857; font-weight: 700; }
+
+    .filter-buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+    .filter-btn { border-radius: 14px; padding: 10px 8px; font-weight: 700; background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; }
+    .filter-btn.active { color: white; background: linear-gradient(to right, #2563eb, #4338ca); border: none; }
   </style>
 </head>
 <body>
@@ -275,10 +279,9 @@
         </div>
       `;
     }
-    let filterMode = "all";
+    let tonKhoFilterMode = "all";
 
-    function renderTonKhoDashboard() {
-      const brandList = Array.from(new Set(tonKhoData.map(r => r.brand).filter(Boolean))).sort((a, b) => a.localeCompare(b, "vi"));
+    function getTonKhoFilteredRows() {
       const brandSelect = document.getElementById("tonKhoBrand");
       const keywordInput = document.getElementById("tonKhoKeyword");
       const selectedBrand = brandSelect ? brandSelect.value : "ALL";
@@ -288,89 +291,128 @@
       if (selectedBrand && selectedBrand !== "ALL") rows = rows.filter(r => r.brand === selectedBrand);
       if (keyword) rows = rows.filter(r => normalizeText(r.code).includes(keyword) || normalizeText(r.name).includes(keyword));
 
-      // 🔥 FILTER MODE
-      if (filterMode === "low") rows = rows.filter(r => r.ton > 0 && r.ton <= 10);
-      if (filterMode === "high") rows = [...rows].sort((a,b)=>b.ton-a.ton);
-      if (filterMode === "sale") rows = [...rows].sort((a,b)=>b.xuat-a.xuat);
+      if (tonKhoFilterMode === "low") {
+        rows = rows.filter(r => r.ton > 0 && r.ton <= 10).sort((a, b) => a.ton - b.ton);
+      } else if (tonKhoFilterMode === "high") {
+        rows = [...rows].sort((a, b) => b.ton - a.ton);
+      } else if (tonKhoFilterMode === "sale") {
+        rows = [...rows].sort((a, b) => b.xuat - a.xuat);
+      } else {
+        rows = [...rows].sort((a, b) => b.ton - a.ton);
+      }
 
+      return rows;
+    }
+
+    function updateTonKhoContent() {
+      const rows = getTonKhoFilteredRows();
       const sum = key => rows.reduce((s, r) => s + Number(r[key] || 0), 0);
       const topRows = rows.slice(0, 60);
 
-      const brandOptions = `<option value="ALL">Tất cả hãng</option>` + brandList.map(b => `<option value="${b}" ${b === selectedBrand ? "selected" : ""}>${b}</option>`).join("");
-      const tableHtml = topRows.map(r => {
-        const tonClass = r.ton <= 10 ? "low-stock" : r.ton >= 500 ? "high-stock" : "";
-        return `<tr>
-          <td>${r.brand || ""}</td>
-          <td><strong>${r.code}</strong></td>
-          <td>${r.name || ""}</td>
-          <td>${formatNumber(r.nhap)}</td>
-          <td>${formatNumber(r.xuat)}</td>
-          <td class="${tonClass}">${formatNumber(r.ton)}</td>
-          <td>${formatNumber(r.thung)}</td>
-          <td>${formatNumber(r.vien)}</td>
-          <td>${formatNumber(r.tienVon)}</td>
-        </tr>`;
-      }).join("");
+      const countEl = document.getElementById("tonKhoCount");
+      if (countEl) countEl.textContent = rows.length + " mã";
 
-      tonKhoBox.innerHTML = `
-        <div class="result-body">
-          <div class="top-row">
-            <div>
-              <p class="muted">Dashboard</p>
-              <h2 class="code" style="font-size:28px;">Tồn kho</h2>
-            </div>
-            <span class="stock">${rows.length} mã</span>
-          </div>
+      const modeTitle = {
+        all: "Danh sách tồn kho",
+        high: "Hàng tồn nhiều",
+        low: "Hàng tồn thấp",
+        sale: "Hàng bán chạy"
+      }[tonKhoFilterMode] || "Danh sách tồn kho";
 
-          <!-- 🔥 BUTTON FILTER -->
-          <div style="display:flex; gap:8px; margin-bottom:10px;">
-            <button onclick="filterMode='all';renderTonKhoDashboard()">Tất cả</button>
-            <button onclick="filterMode='high';renderTonKhoDashboard()">Tồn nhiều</button>
-            <button onclick="filterMode='low';renderTonKhoDashboard()">Tồn thấp</button>
-            <button onclick="filterMode='sale';renderTonKhoDashboard()">Bán chạy</button>
-          </div>
+      const titleEl = document.getElementById("tonKhoModeTitle");
+      if (titleEl) titleEl.textContent = modeTitle;
 
-          <div class="tonkho-tools">
-            <select id="tonKhoBrand">${brandOptions}</select>
-            <input id="tonKhoKeyword" value="${keywordInput ? keywordInput.value : ""}" placeholder="Tìm mã hoặc tên hàng" />
-          </div>
-
-          <div class="tonkho-summary">
-            <div class="tonkho-card"><p class="tonkho-label">Tổng đầu kỳ</p><p class="tonkho-value">${formatNumber(sum("dauKy"))}</p></div>
-            <div class="tonkho-card"><p class="tonkho-label">Tổng tồn</p><p class="tonkho-value">${formatNumber(sum("ton"))}</p></div>
-            <div class="tonkho-card"><p class="tonkho-label">Tổng nhập</p><p class="tonkho-value">${formatNumber(sum("nhap"))}</p></div>
-            <div class="tonkho-card"><p class="tonkho-label">Tổng xuất</p><p class="tonkho-value">${formatNumber(sum("xuat"))}</p></div>
-            <div class="tonkho-card"><p class="tonkho-label">Tổng thùng</p><p class="tonkho-value">${formatNumber(sum("thung"))}</p></div>
-            <div class="tonkho-card"><p class="tonkho-label">Tổng viên</p><p class="tonkho-value">${formatNumber(sum("vien"))}</p></div>
-          </div>
-
-          <h3 class="related-title">Danh sách tồn kho</h3>
-          <div class="tonkho-table-wrap">
-            <table class="tonkho-table">
-              <thead>
-                <tr><th>Hãng</th><th>Mã</th><th>Tên hàng</th><th>Nhập</th><th>Xuất</th><th>Tồn</th><th>Thùng</th><th>Viên</th><th>Tiền vốn</th></tr>
-              </thead>
-              <tbody>${tableHtml || '<tr><td colspan="9">Chưa có dữ liệu tồn kho</td></tr>'}</tbody>
-            </table>
-          </div>
-        </div>
-      `;
-
-      document.getElementById("tonKhoBrand").onchange = renderTonKhoDashboard;
-      const inputEl = document.getElementById("tonKhoKeyword");
-      inputEl.oninput = () => {
-        const pos = inputEl.selectionStart;
-        const val = inputEl.value;
-        renderTonKhoDashboard();
-        setTimeout(() => {
-          const el = document.getElementById("tonKhoKeyword");
-          if (el) {
-            el.focus();
-            el.value = val;
-            el.setSelectionRange(pos, pos);
-          }
-        }, 0);
+      const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = formatNumber(value);
       };
+
+      setText("sumDauKy", sum("dauKy"));
+      setText("sumTon", sum("ton"));
+      setText("sumNhap", sum("nhap"));
+      setText("sumXuat", sum("xuat"));
+      setText("sumThung", sum("thung"));
+      setText("sumVien", sum("vien"));
+
+      const tbody = document.getElementById("tonKhoTableBody");
+      if (!tbody) return;
+
+      tbody.innerHTML = topRows.map(r => {
+        const tonClass = r.ton <= 10 ? "low-stock" : r.ton >= 500 ? "high-stock" : "";
+        return '<tr>' +
+          '<td>' + (r.brand || "") + '</td>' +
+          '<td><strong>' + r.code + '</strong></td>' +
+          '<td>' + (r.name || "") + '</td>' +
+          '<td>' + formatNumber(r.nhap) + '</td>' +
+          '<td>' + formatNumber(r.xuat) + '</td>' +
+          '<td class="' + tonClass + '">' + formatNumber(r.ton) + '</td>' +
+          '<td>' + formatNumber(r.thung) + '</td>' +
+          '<td>' + formatNumber(r.vien) + '</td>' +
+          '<td>' + formatNumber(r.tienVon) + '</td>' +
+        '</tr>';
+      }).join("") || '<tr><td colspan="9">Chưa có dữ liệu tồn kho</td></tr>';
+    }
+
+    function renderTonKhoDashboard() {
+      const brandList = Array.from(new Set(tonKhoData.map(r => r.brand).filter(Boolean))).sort((a, b) => a.localeCompare(b, "vi"));
+      const brandOptions = '<option value="ALL">Tất cả hãng</option>' + brandList.map(b => '<option value="' + b + '">' + b + '</option>').join("");
+
+      tonKhoBox.innerHTML =
+        '<div class="result-body">' +
+          '<div class="top-row">' +
+            '<div>' +
+              '<p class="muted">Dashboard</p>' +
+              '<h2 class="code" style="font-size:28px;">Tồn kho</h2>' +
+            '</div>' +
+            '<span class="stock" id="tonKhoCount">0 mã</span>' +
+          '</div>' +
+
+          '<div class="filter-buttons">' +
+            '<button type="button" class="filter-btn active" data-filter="all">Tất cả</button>' +
+            '<button type="button" class="filter-btn" data-filter="high">Tồn nhiều</button>' +
+            '<button type="button" class="filter-btn" data-filter="low">Tồn thấp</button>' +
+            '<button type="button" class="filter-btn" data-filter="sale">Bán chạy</button>' +
+          '</div>' +
+
+          '<div class="tonkho-tools">' +
+            '<select id="tonKhoBrand">' + brandOptions + '</select>' +
+            '<input id="tonKhoKeyword" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" placeholder="Tìm mã hoặc tên hàng" />' +
+          '</div>' +
+
+          '<div class="tonkho-summary">' +
+            '<div class="tonkho-card"><p class="tonkho-label">Tổng đầu kỳ</p><p class="tonkho-value" id="sumDauKy">0</p></div>' +
+            '<div class="tonkho-card"><p class="tonkho-label">Tổng tồn</p><p class="tonkho-value" id="sumTon">0</p></div>' +
+            '<div class="tonkho-card"><p class="tonkho-label">Tổng nhập</p><p class="tonkho-value" id="sumNhap">0</p></div>' +
+            '<div class="tonkho-card"><p class="tonkho-label">Tổng xuất</p><p class="tonkho-value" id="sumXuat">0</p></div>' +
+            '<div class="tonkho-card"><p class="tonkho-label">Tổng thùng</p><p class="tonkho-value" id="sumThung">0</p></div>' +
+            '<div class="tonkho-card"><p class="tonkho-label">Tổng viên</p><p class="tonkho-value" id="sumVien">0</p></div>' +
+          '</div>' +
+
+          '<h3 class="related-title" id="tonKhoModeTitle">Danh sách tồn kho</h3>' +
+          '<div class="tonkho-table-wrap">' +
+            '<table class="tonkho-table">' +
+              '<thead>' +
+                '<tr><th>Hãng</th><th>Mã</th><th>Tên hàng</th><th>Nhập</th><th>Xuất</th><th>Tồn</th><th>Thùng</th><th>Viên</th><th>Tiền vốn</th></tr>' +
+              '</thead>' +
+              '<tbody id="tonKhoTableBody"></tbody>' +
+            '</table>' +
+          '</div>' +
+        '</div>';
+
+      document.querySelectorAll(".filter-btn").forEach(btn => {
+        btn.onclick = () => {
+          tonKhoFilterMode = btn.getAttribute("data-filter") || "all";
+          document.querySelectorAll(".filter-btn").forEach(b => b.classList.toggle("active", b === btn));
+          updateTonKhoContent();
+        };
+      });
+
+      document.getElementById("tonKhoBrand").onchange = updateTonKhoContent;
+
+      const inputEl = document.getElementById("tonKhoKeyword");
+      inputEl.oninput = updateTonKhoContent;
+
+      updateTonKhoContent();
     }
 
     function switchTab(tab) {
@@ -430,7 +472,7 @@
         return {
           code: row.code || row["mã"] || row["ma"] || row["mã số"] || row["ma so"] || "",
           size: row.size || row["kích thước"] || row["kich thuoc"] || row["kt"] || "",
-          price: row.price || row["giá"] || row["gia"] || row["price"] || row["giá tiền"] || row["gia tien"] || row["đơn giá"] || row["don gia"] || row["giá bán"] || row["gia ban"] || "",
+          price: row.price || row["giá"] || row["gia"] || row["price"] || "",
           quantity: Number(row.quantity || row["số lượng"] || row["so luong"] || 1) || 1,
           image: row.image || row["hình ảnh"] || row["hinh anh"] || row["ảnh"] || row["anh"] || "",
           store: row.store || row["cửa hàng"] || row["cua hang"] || row["tên cửa hàng"] || row["ten cua hang"] || "",
