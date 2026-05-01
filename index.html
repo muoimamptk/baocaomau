@@ -80,6 +80,8 @@
     .inventory-kpi-value { margin: 0; font-size: 20px; font-weight: 700; color: #0f172a; }
     .inventory-note { margin-top: 8px; font-size: 13px; color: #64748b; line-height: 1.4; }
     .tonkho-tools { display: flex; gap: 10px; margin-bottom: 12px; }
+    .tonkho-search-row { display: grid; grid-template-columns: 1fr 76px; gap: 8px; }
+    .tonkho-search-btn { border-radius: 14px; padding: 10px 8px; font-weight: 700; color: white; background: linear-gradient(to right, #2563eb, #4338ca); }
     .tonkho-tools select, .tonkho-tools input { border: 1px solid #cbd5e1; border-radius: 14px; padding: 10px 12px; font-size: 15px; outline: none; width: 100%; }
     .tonkho-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
     .tonkho-card { background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 12px; }
@@ -377,7 +379,10 @@
 
           <div class="tonkho-tools">
             <select id="tonKhoBrand">${brandOptions}</select>
-            <input id="tonKhoKeyword" value="${keywordInput ? keywordInput.value : ""}" placeholder="Tìm mã hoặc tên hàng" />
+            <div class="tonkho-search-row">
+              <input id="tonKhoKeyword" value="${keywordInput ? keywordInput.value : ""}" placeholder="Tìm mã hoặc tên hàng" inputmode="search" />
+              <button type="button" class="tonkho-search-btn" id="tonKhoSearchBtn">Tìm</button>
+            </div>
           </div>
 
           <div class="tonkho-summary">
@@ -403,19 +408,14 @@
 
       document.getElementById("tonKhoBrand").onchange = renderTonKhoDashboard;
       const inputEl = document.getElementById("tonKhoKeyword");
-      inputEl.oninput = () => {
-        const pos = inputEl.selectionStart;
-        const val = inputEl.value;
-        renderTonKhoDashboard();
-        setTimeout(() => {
-          const el = document.getElementById("tonKhoKeyword");
-          if (el) {
-            el.focus();
-            el.value = val;
-            el.setSelectionRange(pos, pos);
-          }
-        }, 0);
-      };
+      const searchTonKhoBtn = document.getElementById("tonKhoSearchBtn");
+      if (searchTonKhoBtn) {
+        searchTonKhoBtn.onclick = () => renderTonKhoDashboard();
+      }
+      inputEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") renderTonKhoDashboard();
+      });
+      // Không lọc realtime khi đang gõ để tránh lỗi bàn phím trên điện thoại.
     }
 
     function switchTab(tab) {
@@ -553,10 +553,10 @@
         if (!grouped.has(key)) grouped.set(key, { store: toDisplayText(store), area: toDisplayText(area), totalCodes: 0, sizes: new Map(), codeMap: new Map() });
         const item = grouped.get(key);
         const qty = Math.max(1, Number(entry.quantity) || 1);
-        const g = findGiaByCode(codeUpper);
-        const size = g && g.size ? g.size : "Chưa có kích thước";
         const codeLower = String(entry.code || "").trim().toLowerCase();
         const codeUpper = String(entry.code || "").trim().toUpperCase();
+        const g = findGiaByCode(codeUpper);
+        const size = g && g.size ? g.size : "Chưa có kích thước";
         item.totalCodes += 1;
         if (!item.sizes.has(size)) item.sizes.set(size, { size, quantity: 0, codes: [] });
         const sizeItem = item.sizes.get(size);
@@ -768,7 +768,11 @@
             const image = item.image || FALLBACK_IMAGE;
             return `<div class="date-item"><img src="${image}" alt="${item.code}"><div class="date-item-body"><p class="date-code">${item.code}</p><div class="date-meta">${item.size || ""}</div></div></div>`;
           }).join("");
-          resultBox.innerHTML = `<div class="result-body"><div class="top-row"><div><p class="muted">Ngày phát</p><h2 class="code" style="font-size:28px;">${selectedSize}</h2></div><span class="stock">${dateStores.length} cửa hàng</span></div><div class="related-box" style="margin-top:0; border-top:none; padding-top:0;"><h3 class="related-title">Các mã đã phát</h3><div class="date-grid">${dailyGallery || '<div class="store-item">Chưa có dữ liệu</div>'}</div></div><div class="info-box" style="margin-top:12px;"><p class="info-label">Tổng số cửa hàng</p><p class="info-value">${dateStores.length} cửa hàng</p></div><div class="store-section"><h3 class="store-section-title">Cửa hàng đã phát</h3><div class="store-list">${storeHtml || '<div class="store-item">Chưa có dữ liệu</div>'}</div></div></div>`;
+          const issuedKeys = new Set(dateStores.map((entry) => `${normalizeText(entry.store)}|||${normalizeText(entry.area)}`));
+          const unissuedStores = allStores.filter((entry) => !issuedKeys.has(`${normalizeText(entry.store)}|||${normalizeText(entry.area)}`));
+          const unissuedHtml = unissuedStores.map((entry) => `<div class="store-item">${entry.store}${entry.area ? " - " + entry.area : ""}</div>`).join("");
+
+          resultBox.innerHTML = `<div class="result-body"><div class="top-row"><div><p class="muted">Ngày phát</p><h2 class="code" style="font-size:28px;">${selectedSize}</h2></div><span class="stock">${dateStores.length} cửa hàng</span></div><div class="related-box" style="margin-top:0; border-top:none; padding-top:0;"><h3 class="related-title">Các mã đã phát</h3><div class="date-grid">${dailyGallery || '<div class="store-item">Chưa có dữ liệu</div>'}</div></div><div class="info-box" style="margin-top:12px;"><p class="info-label">Tổng số cửa hàng đã phát</p><p class="info-value">${dateStores.length} cửa hàng</p></div><div class="store-section"><h3 class="store-section-title">Cửa hàng đã phát</h3><div class="store-list">${storeHtml || '<div class="store-item">Chưa có dữ liệu</div>'}</div></div><div class="info-box" style="margin-top:12px;"><p class="info-label">Cửa hàng chưa phát</p><p class="info-value">${unissuedStores.length} nơi chưa phát</p></div><div class="store-section"><h3 class="store-section-title">Cửa hàng chưa phát</h3><div class="store-list">${unissuedHtml || '<div class="store-item">Không còn cửa hàng nào</div>'}</div></div></div>`;
           return;
         }
         const sizeItems = tileData.filter((entry) => normalizeText(entry.size) === normalizeText(selectedSize));
@@ -824,6 +828,17 @@
       const normText = normalizeText(raw);
       searched = true;
       inventoryResultCode = "";
+
+      // Ưu tiên nhận diện ngày trước khi tìm gần đúng theo mã
+      const byDate = rawRows.filter((item) => normalizeText(item.date) === normalizeText(raw));
+      if (byDate.length > 0) {
+        currentResult = null;
+        selectedStoreKey = "";
+        selectedStoreMatches = [];
+        selectedSize = byDate[0].date || raw;
+        renderResult();
+        return;
+      }
 
       const allSearchItems = getAllSearchItems();
       const byCode = allSearchItems.find((item) => item.code === normalized) || null;
@@ -882,16 +897,6 @@
         selectedSize = "";
         selectedStoreKey = "";
         selectedStoreMatches = matchedStores;
-        renderResult();
-        return;
-      }
-
-      const byDate = rawRows.filter((item) => normalizeText(item.date) === normalizeText(normalized));
-      if (byDate.length > 0) {
-        currentResult = null;
-        selectedStoreKey = "";
-        selectedStoreMatches = [];
-        selectedSize = byDate[0].date || normalized;
         renderResult();
         return;
       }
