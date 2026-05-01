@@ -116,9 +116,9 @@
       <div class="search-row">
         <div class="input-wrap">
           <div class="search-icon">🔎</div>
-          <input id="codeInput" value="" placeholder="" />
+          <input id="codeInput" value="" placeholder="Tìm mã hoặc tên hàng" inputmode="search" />
         </div>
-        <button class="btn-primary" id="searchBtn">Tra cứu</button>
+        <button type="button" class="btn-primary" id="searchBtn">Tra cứu</button>
       </div>
     </div>
 
@@ -939,15 +939,16 @@
       }
     }
 
-    searchBtn.addEventListener("click", handleSearch);
+    searchBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      handleSearch();
+      setTimeout(() => codeInput.focus(), 0);
+    });
     codeInput.addEventListener("keydown", (e) => { if (e.key === "Enter") handleSearch(); });
+    // 🔥 TẮT realtime khi gõ (fix mobile)
+    // Chỉ tìm khi bấm nút hoặc Enter
     codeInput.addEventListener("input", () => {
-      searched = false;
-      currentResult = null;
-      selectedStoreKey = "";
-      selectedStoreMatches = [];
-      selectedSize = "";
-      renderResult();
+      // Không render lại liên tục nữa để tránh giật bàn phím trên điện thoại
     });
 
     tabMarketBtn.addEventListener("click", () => switchTab("market"));
