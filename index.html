@@ -69,7 +69,7 @@
     .match-code { margin: 0; font-size: 16px; font-weight: 700; color: #0f172a; }
     .match-meta { margin-top: 4px; font-size: 13px; color: #64748b; line-height: 1.35; }
 
-    .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .tabs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px; }
     .tab-btn { border-radius: 18px; padding: 12px 10px; font-weight: 700; background: white; color: #334155; border: 1px solid #cbd5e1; box-shadow: 0 6px 14px rgba(15,23,42,0.06); }
     .tab-btn.active { color: white; background: linear-gradient(to right, #2563eb, #4338ca); border: none; }
     .inventory-mini { margin-top: 14px; border-radius: 18px; background: #f8fafc; border: 1px solid #dbeafe; padding: 14px; }
@@ -93,6 +93,21 @@
     .tonkho-table th { background: #f1f5f9; position: sticky; top: 0; z-index: 1; }
     .low-stock { color: #be123c; font-weight: 700; }
     .high-stock { color: #047857; font-weight: 700; }
+
+    .calc-form { display: flex; flex-direction: column; gap: 12px; }
+    .calc-form select, .calc-form input { width: 100%; border: 1px solid #cbd5e1; border-radius: 18px; padding: 14px 16px; font-size: 16px; outline: none; background: white; }
+    .calc-form select:focus, .calc-form input:focus { border-color: #64748b; }
+    .calc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .calc-btn { border-radius: 18px; padding: 14px 16px; font-weight: 700; color: white; background: linear-gradient(to right, #2563eb, #4338ca); box-shadow: 0 8px 18px rgba(37,99,235,0.2); }
+    .calc-result { margin-top: 16px; border-radius: 18px; background: #f8fafc; border: 1px solid #dbeafe; padding: 14px; }
+    .calc-result-title { margin: 0 0 10px; font-size: 16px; font-weight: 700; color: #0f172a; }
+    .calc-result-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .calc-kpi { border-radius: 14px; padding: 10px; background: white; border: 1px solid #e2e8f0; }
+    .calc-kpi-label { margin: 0 0 4px; font-size: 12px; color: #64748b; }
+    .calc-kpi-value { margin: 0; font-size: 20px; font-weight: 700; color: #0f172a; }
+    .calc-total { margin-top: 12px; border-radius: 18px; background: linear-gradient(to right, #2563eb, #4338ca); color: white; padding: 14px; }
+    .calc-total p { margin: 0; }
+    .calc-total-value { margin-top: 4px !important; font-size: 28px; font-weight: 700; }
   </style>
 </head>
 <body>
@@ -108,6 +123,7 @@
     <div class="tabs">
       <button class="tab-btn active" id="tabMarketBtn" type="button">🔎 Tra cứu</button>
       <button class="tab-btn" id="tabStockBtn" type="button">📦 Tồn kho</button>
+      <button class="tab-btn" id="tabCalcBtn" type="button">🧮 Tính</button>
     </div>
 
     <div class="card" id="searchCard">
@@ -126,6 +142,90 @@
 
     <div class="result" id="resultBox"></div>
     <div class="result" id="tonKhoBox" style="display:none;"></div>
+
+    <div class="card" id="calcBox" style="display:none;">
+      <div class="top-row">
+        <div>
+          <p class="muted">Công cụ</p>
+          <h2 class="code" style="font-size:28px;">Tính gạch</h2>
+        </div>
+        <span class="stock">m² / thùng</span>
+      </div>
+
+      <div class="calc-form">
+        <div>
+          <label for="calcSizeSelect">Kích thước</label>
+          <select id="calcSizeSelect">
+            <option value="15x50">15x50</option>
+            <option value="20x40">20x40</option>
+            <option value="25x50">25x50</option>
+            <option value="30x30">30x30</option>
+            <option value="30x60">30x60</option>
+            <option value="40x40">40x40</option>
+            <option value="40x80">40x80</option>
+            <option value="50x50">50x50</option>
+            <option value="60x60">60x60</option>
+            <option value="60x120">60x120</option>
+            <option value="80x80">80x80</option>
+            <option value="100x100">100x100</option>
+            <option value="custom">Khác</option>
+          </select>
+          <input id="calcCustomSize" placeholder="Nhập kích thước khác, ví dụ 33x33" style="display:none; margin-top:8px;" />
+        </div>
+
+        <div class="calc-row">
+          <div>
+            <label for="calcTilesPerBox">Viên / thùng</label>
+            <input type="number" id="calcTilesPerBox" placeholder="Ví dụ 11" min="1" inputmode="decimal" />
+          </div>
+          <div>
+            <label for="calcInputType">Kiểu nhập</label>
+            <select id="calcInputType">
+              <option value="m2">Nhập m²</option>
+              <option value="box">Nhập thùng</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label for="calcInputValue" id="calcInputLabel">Số m² cần dùng</label>
+          <input type="number" id="calcInputValue" placeholder="Nhập số lượng" min="0" inputmode="decimal" />
+        </div>
+
+        <div class="calc-row">
+          <div>
+            <label for="calcPriceType">Loại giá</label>
+            <select id="calcPriceType">
+              <option value="m2">Giá theo m²</option>
+              <option value="box">Giá theo thùng</option>
+              <option value="tile">Giá theo viên</option>
+            </select>
+          </div>
+          <div>
+            <label for="calcPriceValue">Đơn giá</label>
+            <input type="number" id="calcPriceValue" placeholder="Nhập giá" min="0" inputmode="decimal" />
+          </div>
+        </div>
+
+        <div class="calc-row">
+          <div>
+            <label>Thùng điểm</label>
+            <input type="number" id="calcDiemBox" placeholder="Số thùng điểm" min="0" />
+          </div>
+          <div>
+            <label>Giá viên điểm</label>
+            <input type="number" id="calcDiemPrice" placeholder="Giá / viên" min="0" />
+          </div>
+        </div>
+
+        <button type="button" class="calc-btn" id="calcBtn">Tính kết quả</button>
+      </div>
+
+      <div class="calc-result" id="calcResult">
+        <h3 class="calc-result-title">Kết quả sẽ hiển thị ở đây</h3>
+        <div class="inventory-note">Nhập kích thước, viên/thùng, số lượng và giá để tính.</div>
+      </div>
+    </div>
     <div class="footer-box" id="footerBox">Dữ liệu lấy từ Tiền Minh Chiến</div>
   </div>
 
@@ -153,8 +253,10 @@
     const searchBtn = document.getElementById("searchBtn");
     const tabMarketBtn = document.getElementById("tabMarketBtn");
     const tabStockBtn = document.getElementById("tabStockBtn");
+    const tabCalcBtn = document.getElementById("tabCalcBtn");
     const searchCard = document.getElementById("searchCard");
     const tonKhoBox = document.getElementById("tonKhoBox");
+    const calcBox = document.getElementById("calcBox");
     const footerBox = document.getElementById("footerBox");
 
     function normalizeText(text) { return String(text || "").trim().toLowerCase(); }
@@ -252,6 +354,7 @@
         thung: parseNumberFlexible(pick(row, ["Thùng", "Thung"])),
         vien: parseNumberFlexible(pick(row, ["Viên", "Vien"])),
         tienVon: parseNumberFlexible(pick(row, ["Tiền vốn", "Tien von"])),
+        thoiGian: pick(row, ["Thời gian", "Thoi gian"]) || ""
       })).filter(row => row.code && row.code !== "MÃ HÀNG" && row.name);
     }
     function findInventoryByCode(code) {
@@ -319,6 +422,11 @@
     }
     let filterMode = "all";
 
+    function getTonKhoUpdatedDate() {
+      const found = tonKhoData.find(r => r.thoiGian && String(r.thoiGian).trim());
+      return found ? found.thoiGian : "chưa có";
+    }
+
     function renderTonKhoDashboard() {
       const brandList = Array.from(new Set(tonKhoData.map(r => r.brand).filter(Boolean))).sort((a, b) => a.localeCompare(b, "vi"));
       const brandSelect = document.getElementById("tonKhoBrand");
@@ -365,6 +473,7 @@
             <div>
               <p class="muted">Dashboard</p>
               <h2 class="code" style="font-size:28px;">Tồn kho</h2>
+              <p class="muted">Cập nhật dữ liệu ngày: ${getTonKhoUpdatedDate()}</p>
             </div>
             <span class="stock">${rows.length} mã</span>
           </div>
@@ -420,12 +529,15 @@
 
     function switchTab(tab) {
       const isStock = tab === "stock";
-      tabMarketBtn.classList.toggle("active", !isStock);
+      const isCalc = tab === "calc";
+      tabMarketBtn.classList.toggle("active", !isStock && !isCalc);
       tabStockBtn.classList.toggle("active", isStock);
-      searchCard.style.display = isStock ? "none" : "block";
-      resultBox.style.display = isStock ? "none" : "block";
+      tabCalcBtn.classList.toggle("active", isCalc);
+      searchCard.style.display = (!isStock && !isCalc) ? "block" : "none";
+      resultBox.style.display = (!isStock && !isCalc) ? "block" : "none";
       tonKhoBox.style.display = isStock ? "block" : "none";
-      footerBox.textContent = isStock ? "Dữ liệu tồn kho lấy từ sheet TỒN KHO" : "Dữ liệu lấy từ Tiền Minh Chiến";
+      calcBox.style.display = isCalc ? "block" : "none";
+      footerBox.textContent = isStock ? "Dữ liệu tồn kho lấy từ sheet TỒN KHO" : (isCalc ? "Công cụ tính m², thùng, viên và tiền" : "Dữ liệu lấy từ Tiền Minh Chiến");
       if (isStock) renderTonKhoDashboard();
     }
 
@@ -944,6 +1056,117 @@
       }
     }
 
+
+    function getCalcSizeText() {
+      const sizeSelect = document.getElementById("calcSizeSelect");
+      const customSize = document.getElementById("calcCustomSize");
+      return sizeSelect.value === "custom" ? customSize.value.trim() : sizeSelect.value;
+    }
+
+    function getCalcAreaPerTile() {
+      const sizeText = getCalcSizeText().toLowerCase().replace(/\s+/g, "");
+      const parts = sizeText.split("x").map(Number);
+      if (parts.length !== 2 || !parts[0] || !parts[1]) return 0;
+      return (parts[0] * parts[1]) / 10000;
+    }
+
+    function formatMoney(value) {
+      return Math.round(Number(value || 0)).toLocaleString("vi-VN") + " đ";
+    }
+
+    function renderCalcError(message) {
+      document.getElementById("calcResult").innerHTML = `<h3 class="calc-result-title">Chưa tính được</h3><div class="inventory-note">${message}</div>`;
+    }
+
+    function calculateTiles() {
+      const areaPerTile = getCalcAreaPerTile();
+      const tilesPerBox = Number(document.getElementById("calcTilesPerBox").value);
+      const inputType = document.getElementById("calcInputType").value;
+      const inputValue = Number(document.getElementById("calcInputValue").value);
+      const priceType = document.getElementById("calcPriceType").value;
+      const priceValue = Number(document.getElementById("calcPriceValue").value);
+
+      if (!areaPerTile) { renderCalcError("Vui lòng chọn hoặc nhập kích thước đúng dạng 30x60."); return; }
+      if (!tilesPerBox || tilesPerBox <= 0) { renderCalcError("Vui lòng nhập số viên / thùng."); return; }
+      if (!inputValue || inputValue <= 0) { renderCalcError("Vui lòng nhập số lượng cần tính."); return; }
+
+      let totalTiles = 0;
+      let totalM2 = 0;
+
+      if (inputType === "m2") {
+        totalTiles = Math.ceil(inputValue / areaPerTile);
+        totalM2 = totalTiles * areaPerTile;
+      } else {
+        totalTiles = Math.ceil(inputValue * tilesPerBox);
+        totalM2 = totalTiles * areaPerTile;
+      }
+
+      const fullBoxes = Math.floor(totalTiles / tilesPerBox);
+      const remainTiles = totalTiles % tilesPerBox;
+      const boxDecimal = totalTiles / tilesPerBox;
+      const m2PerBox = areaPerTile * tilesPerBox;
+      
+
+      // 👉 viên điểm (trừ khỏi tổng)
+      const diemBox = Number(document.getElementById("calcDiemBox").value) || 0;
+      const diemPrice = Number(document.getElementById("calcDiemPrice").value) || 0;
+      const diemTiles = diemBox * tilesPerBox;
+
+      // trừ viên điểm ra khỏi gạch thường
+      let normalTiles = totalTiles - diemTiles;
+      if (normalTiles < 0) normalTiles = 0;
+
+      const normalBoxes = Math.floor(normalTiles / tilesPerBox);
+      const normalRemain = normalTiles % tilesPerBox;
+      const normalBoxDecimal = normalTiles / tilesPerBox;
+
+      // tiền gạch thường
+      let normalMoney = 0;
+      if (priceType === "m2") normalMoney = (normalTiles * areaPerTile) * priceValue;
+      else if (priceType === "box") normalMoney = normalBoxDecimal * priceValue;
+      else if (priceType === "tile") normalMoney = normalTiles * priceValue;
+
+      // tiền điểm
+      const diemMoney = diemTiles * diemPrice;
+
+      const totalMoney = normalMoney + diemMoney;
+
+      document.getElementById("calcResult").innerHTML = `
+        <h3 class="calc-result-title">Kết quả</h3>
+        <div class="calc-result-grid">
+          <div class="calc-kpi"><p class="calc-kpi-label">1 viên</p><p class="calc-kpi-value">${areaPerTile.toFixed(3)} m²</p></div>
+          <div class="calc-kpi"><p class="calc-kpi-label">1 thùng</p><p class="calc-kpi-value">${m2PerBox.toFixed(2)} m²</p></div>
+          <div class="calc-kpi"><p class="calc-kpi-label">Tổng m²</p><p class="calc-kpi-value">${totalM2.toFixed(2)}</p></div>
+          <div class="calc-kpi"><p class="calc-kpi-label">Tổng viên</p><p class="calc-kpi-value">${formatNumber(totalTiles)}</p></div>
+          <div class="calc-kpi"><p class="calc-kpi-label">Quy đổi</p><p class="calc-kpi-value">${fullBoxes} thùng + ${remainTiles} viên</p></div>
+          <div class="calc-kpi"><p class="calc-kpi-label">Tính tiền theo</p><p class="calc-kpi-value">${priceType === "m2" ? "m²" : (priceType === "box" ? "thùng" : "viên")}</p></div>
+        </div>
+        <div class="calc-total">
+          <p>Tiền gạch thường</p>
+          <p>${formatMoney(normalMoney)}</p>
+          <p>Tiền viên điểm</p>
+          <p>${formatMoney(diemMoney)}</p>
+          <p class="calc-total-value">Tổng: ${formatMoney(totalMoney)}</p>
+        </div>
+      `;
+    }
+
+    function setupCalcTab() {
+      const sizeSelect = document.getElementById("calcSizeSelect");
+      const customSize = document.getElementById("calcCustomSize");
+      const inputType = document.getElementById("calcInputType");
+      const inputLabel = document.getElementById("calcInputLabel");
+      const calcBtn = document.getElementById("calcBtn");
+
+      sizeSelect.addEventListener("change", () => {
+        customSize.style.display = sizeSelect.value === "custom" ? "block" : "none";
+      });
+      inputType.addEventListener("change", () => {
+        inputLabel.textContent = inputType.value === "m2" ? "Số m² cần dùng" : "Số thùng cần tính";
+      });
+      calcBtn.addEventListener("click", calculateTiles);
+    }
+
     searchBtn.addEventListener("click", (e) => {
       e.preventDefault();
       handleSearch();
@@ -958,6 +1181,7 @@
 
     tabMarketBtn.addEventListener("click", () => switchTab("market"));
     tabStockBtn.addEventListener("click", () => switchTab("stock"));
+    tabCalcBtn.addEventListener("click", () => switchTab("calc"));
 
     async function initApp() {
       renderResult();
@@ -970,6 +1194,7 @@
       renderResult();
     }
 
+    setupCalcTab();
     initApp();
   </script>
 </body>
