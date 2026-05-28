@@ -739,7 +739,9 @@
       const sectionsHtml = inventory.sizes.map((group) => {
         const itemsHtml = group.items.map((item) => {
           const image = item.image || FALLBACK_IMAGE;
-          return `<div class="date-item"><img src="${image}" alt="${item.code}"><div class="date-item-body"><p class="date-code">${item.code}</p><div class="date-meta">${group.size}</div></div></div>`;
+          const latestDateRow = rawRows.filter(r => String(r.code || '').trim().toUpperCase() === item.code).sort((a,b)=>(b.dateValue||0)-(a.dateValue||0))[0];
+          const latestDate = latestDateRow && latestDateRow.date ? `<br>Phát: ${latestDateRow.date}` : "";
+          return `<div class="date-item"><img src="${image}" alt="${item.code}"><div class="date-item-body"><p class="date-code">${item.code}</p><div class="date-meta">${group.size}${latestDate}</div></div></div>`;
         }).join("");
         return `<div class="related-box" style="margin-top:14px;"><h3 class="related-title">${group.size}</h3><div class="date-grid">${itemsHtml}</div></div>`;
       }).join("");
@@ -805,7 +807,19 @@
     }
 
     function renderCodeMatches(matches, keyword) {
-      const listHtml = matches.slice(0, 40).map((item) => {
+      const sortedMatches = [...matches].sort((a, b) => {
+        const noSizeA = !a.size || normalizeText(a.size).includes("chưa có");
+        const noSizeB = !b.size || normalizeText(b.size).includes("chưa có");
+        if (noSizeA !== noSizeB) return noSizeA ? 1 : -1;
+
+        const sizeA = parseSizeValue(a.size);
+        const sizeB = parseSizeValue(b.size);
+        if (sizeA !== sizeB) return sizeA - sizeB;
+
+        return a.code.localeCompare(b.code, "vi");
+      });
+
+      const listHtml = sortedMatches.slice(0, 40).map((item) => {
         const image = item.image || FALLBACK_IMAGE;
         const inventory = findInventoryByCode(item.code);
         let stockText = "Tồn kho: chưa có";
@@ -842,7 +856,7 @@
               <p class="muted">Kết quả liên quan</p>
               <h2 class="code" style="font-size:28px;">${keyword}</h2>
             </div>
-            <span class="stock">${matches.length} mã</span>
+            <span class="stock">${sortedMatches.length} mã</span>
           </div>
           <div class="match-grid">${listHtml}</div>
         </div>
@@ -929,7 +943,18 @@
         }
         const sizeItems = giaData
           .filter((entry) => normalizeText(entry.size) === normalizeText(selectedSize))
-          .map(makeTileFromGia);
+          .map(makeTileFromGia)
+          .sort((a, b) => {
+            const sizeA = a.size && a.size !== "Chưa có kích thước" ? parseSizeValue(a.size) : 999999;
+            const sizeB = b.size && b.size !== "Chưa có kích thước" ? parseSizeValue(b.size) : 999999;
+            if (sizeA !== sizeB) return sizeA - sizeB;
+
+            const noSizeA = !a.size || normalizeText(a.size).includes("chưa có");
+            const noSizeB = !b.size || normalizeText(b.size).includes("chưa có");
+            if (noSizeA !== noSizeB) return noSizeA ? 1 : -1;
+
+            return a.code.localeCompare(b.code, "vi");
+          });
         const sizeHtml = sizeItems.map((entry) => {
           const image = entry.image || FALLBACK_IMAGE;
           const inventory = findInventoryByCode(entry.code);
@@ -1034,32 +1059,13 @@
         ? allSearchItems.filter((item) => normalizeText(item.code).replaceAll(" ", "").includes(normText))
         : [];
 
-      if (matchedCodes.length > 1) {
+      if (matchedCodes.length > 0) {
         currentResult = null;
         selectedStoreKey = "";
         selectedStoreMatches = [];
         selectedSize = "";
         inventoryResultCode = "";
         renderCodeMatches(matchedCodes, raw);
-        return;
-      }
-
-      if (matchedCodes.length === 1) {
-        currentResult = matchedCodes[0];
-        selectedStoreKey = "";
-        selectedStoreMatches = [];
-        selectedSize = matchedCodes[0].size || "";
-        renderResult();
-        return;
-      }
-
-      const byCode = allSearchItems.find((item) => normalizeText(item.code).replaceAll(" ", "") === normText) || null;
-      if (byCode) {
-        currentResult = byCode;
-        selectedStoreKey = "";
-        selectedStoreMatches = [];
-        selectedSize = byCode.size || "";
-        renderResult();
         return;
       }
 
