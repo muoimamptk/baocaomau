@@ -808,12 +808,34 @@
 
     function renderCodeMatches(matches, keyword) {
       const sortedMatches = [...matches].sort((a, b) => {
+        const invA = findInventoryByCode(a.code);
+        const invB = findInventoryByCode(b.code);
+
+        const tonA = invA ? Number(invA.ton || 0) : 0;
+        const tonB = invB ? Number(invB.ton || 0) : 0;
+
+        const nameA = normalizeText(a.name || "");
+        const nameB = normalizeText(b.name || "");
+
+        const baseA = nameA.split(/[\s()\-]+/).slice(0, 3).join(" ");
+        const baseB = nameB.split(/[\s()\-]+/).slice(0, 3).join(" ");
+
+        if (baseA === baseB && tonA !== tonB) {
+          return tonB - tonA;
+        }
+
+        if (tonA !== tonB) {
+          return tonB - tonA;
+        }
+
         const noSizeA = !a.size || normalizeText(a.size).includes("chưa có");
         const noSizeB = !b.size || normalizeText(b.size).includes("chưa có");
+
         if (noSizeA !== noSizeB) return noSizeA ? 1 : -1;
 
         const sizeA = parseSizeValue(a.size);
         const sizeB = parseSizeValue(b.size);
+
         if (sizeA !== sizeB) return sizeA - sizeB;
 
         return a.code.localeCompare(b.code, "vi");
@@ -945,13 +967,18 @@
           .filter((entry) => normalizeText(entry.size) === normalizeText(selectedSize))
           .map(makeTileFromGia)
           .sort((a, b) => {
+            const invA = findInventoryByCode(a.code);
+            const invB = findInventoryByCode(b.code);
+
+            const tonA = invA ? Number(invA.ton || 0) : 0;
+            const tonB = invB ? Number(invB.ton || 0) : 0;
+
+            if (tonA !== tonB) return tonB - tonA;
+
             const sizeA = a.size && a.size !== "Chưa có kích thước" ? parseSizeValue(a.size) : 999999;
             const sizeB = b.size && b.size !== "Chưa có kích thước" ? parseSizeValue(b.size) : 999999;
-            if (sizeA !== sizeB) return sizeA - sizeB;
 
-            const noSizeA = !a.size || normalizeText(a.size).includes("chưa có");
-            const noSizeB = !b.size || normalizeText(b.size).includes("chưa có");
-            if (noSizeA !== noSizeB) return noSizeA ? 1 : -1;
+            if (sizeA !== sizeB) return sizeA - sizeB;
 
             return a.code.localeCompare(b.code, "vi");
           });
