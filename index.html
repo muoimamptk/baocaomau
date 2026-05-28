@@ -355,7 +355,7 @@
         thung: parseNumberFlexible(pick(row, ["Thùng", "Thung"])),
         vien: parseNumberFlexible(pick(row, ["Viên", "Vien"])),
         tienVon: parseNumberFlexible(pick(row, ["Tiền vốn", "Tien von"])),
-        thoiGian: pick(row, ["Thời gian", "Thoi gian"]) || ""
+        thoiGian: pick(row, ["Thời gian", "Thoi gian", "Ngày cập nhật", "Ngay cap nhat", "Ngày cập nhật kho", "Ngay cap nhat kho", "Cập nhật", "Cap nhat", "Date"]) || Object.entries(row).find(([k, v]) => normalizeText(k).includes("thời gian") && String(v || "").trim())?.[1] || ""
       })).filter(row => row.code && row.code !== "MÃ HÀNG" && row.name);
     }
     function findInventoryByCode(code) {
