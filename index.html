@@ -309,7 +309,8 @@
         code: String(r["Mã hàng"] || r["Ma hang"] || "").trim().toUpperCase(),
         size: r["Kích thước"] || r["Kích thướt"] || r["Kich thuoc"] || r["Kich thuot"] || r["KT"] || r["kt"] || "",
         price: r["Giá tiền"] || r["Gia tien"] || "",
-        image: r["Hình ảnh"] || r["Hinh anh"] || ""
+        image: r["Hình ảnh"] || r["Hinh anh"] || "",
+        name: r["Tên hàng"] || r["Ten hang"] || ""
       })).filter(r => r.code);
     }
 
@@ -649,6 +650,7 @@
           item.size = g.size || "";
           item.price = g.price || "";
           item.image = g.image || "";
+          item.name = g.name || "";
         }
       });
 
@@ -768,16 +770,32 @@
         size: g.size || "",
         price: g.price || "",
         image: g.image || "",
+        name: g.name || "",
         stores: []
       };
     }
 
     function getAllSearchItems() {
       const map = new Map();
-      tileData.forEach(item => map.set(item.code, item));
+
+      // Ưu tiên dữ liệu từ sheet GIÁ: mã, tên hàng, kích thước, giá, hình ảnh.
       giaData.forEach(g => {
-        if (!map.has(g.code)) map.set(g.code, makeTileFromGia(g));
+        map.set(g.code, makeTileFromGia(g));
       });
+
+      // Sau đó ghép thêm thông tin đã phát mẫu từ Trang tính1 nếu có.
+      tileData.forEach(item => {
+        if (map.has(item.code)) {
+          const existing = map.get(item.code);
+          map.set(item.code, {
+            ...existing,
+            stores: item.stores || []
+          });
+        } else {
+          map.set(item.code, item);
+        }
+      });
+
       return Array.from(map.values()).sort((a, b) => a.code.localeCompare(b.code));
     }
 
@@ -790,8 +808,30 @@
       const listHtml = matches.slice(0, 40).map((item) => {
         const image = item.image || FALLBACK_IMAGE;
         const inventory = findInventoryByCode(item.code);
-        const stockText = inventory ? `Tồn kho: ${formatNumber(inventory.ton)}` : "Tồn kho: chưa có";
-        const meta = `${item.size || "Chưa có kích thước"}${item.price ? " - " + item.price : ""}<br>${stockText}`;
+        let stockText = "Tồn kho: chưa có";
+        if (inventory) {
+          let quyCach = "";
+          if (inventory.thung > 0) {
+            const vienLe = Number(inventory.vien || 0);
+            const vienChan = Number(inventory.ton || 0) - vienLe;
+            const vienPerThung = Math.round(vienChan / inventory.thung);
+            if (vienPerThung > 0) {
+              const sizeText = String(item.size || "").toLowerCase().replaceAll(" ", "");
+              const parts = sizeText.split("x").map(Number);
+              let m2Text = "";
+              if (parts.length === 2 && parts[0] && parts[1]) {
+                const m2PerTile = (parts[0] * parts[1]) / 10000;
+                const m2PerBox = m2PerTile * vienPerThung;
+                m2Text = ` • ${m2PerBox.toFixed(2)} m²/thùng`;
+              }
+              quyCach = ` • ${vienPerThung} viên/thùng${m2Text}`;
+            }
+          }
+          stockText = `Tồn kho: ${formatNumber(inventory.ton)} viên (${formatNumber(inventory.thung)} thùng${quyCach})`;
+        }
+        const gia = findGiaByCode(item.code);
+        const productName = gia && gia.name ? gia.name : "";
+        const meta = `${productName ? productName + "<br>" : ""}${item.price ? item.price + "<br>" : ""}${item.size || "Chưa có kích thước"}<br>${stockText}`;
         return `<button type="button" class="match-btn" data-code="${item.code}"><img src="${image}" alt="${item.code}"><div class="match-body"><p class="match-code">${item.code}</p><div class="match-meta">${meta}</div></div></button>`;
       }).join("");
 
@@ -887,12 +927,35 @@
           resultBox.innerHTML = `<div class="result-body"><div class="top-row"><div><p class="muted">Ngày phát</p><h2 class="code" style="font-size:28px;">${selectedSize}</h2></div><span class="stock">${dateStores.length} cửa hàng</span></div><div class="related-box" style="margin-top:0; border-top:none; padding-top:0;"><h3 class="related-title">Các mã đã phát</h3><div class="date-grid">${dailyGallery || '<div class="store-item">Chưa có dữ liệu</div>'}</div></div><div class="info-box" style="margin-top:12px;"><p class="info-label">Tổng số cửa hàng đã phát</p><p class="info-value">${dateStores.length} cửa hàng</p></div><div class="store-section"><h3 class="store-section-title">Cửa hàng đã phát</h3><div class="store-list">${storeHtml || '<div class="store-item">Chưa có dữ liệu</div>'}</div></div><div class="info-box" style="margin-top:12px;"><p class="info-label">Cửa hàng chưa phát</p><p class="info-value">${unissuedStores.length} nơi chưa phát</p></div><div class="store-section"><h3 class="store-section-title">Cửa hàng chưa phát</h3><div class="store-list">${unissuedHtml || '<div class="store-item">Không còn cửa hàng nào</div>'}</div></div></div>`;
           return;
         }
-        const sizeItems = tileData.filter((entry) => normalizeText(entry.size) === normalizeText(selectedSize));
+        const sizeItems = giaData
+          .filter((entry) => normalizeText(entry.size) === normalizeText(selectedSize))
+          .map(makeTileFromGia);
         const sizeHtml = sizeItems.map((entry) => {
           const image = entry.image || FALLBACK_IMAGE;
           const inventory = findInventoryByCode(entry.code);
-          const stockText = inventory ? ` - Tồn kho: ${formatNumber(inventory.ton)}` : " - Tồn kho: chưa có";
-          const meta = (entry.size || "") + stockText + (entry.price ? " - " + entry.price : "");
+          let stockText = " - Tồn kho: chưa có";
+          if (inventory) {
+            let quyCach = "";
+            if (inventory.thung > 0) {
+              const vienLe = Number(inventory.vien || 0);
+              const vienChan = Number(inventory.ton || 0) - vienLe;
+              const vienPerThung = Math.round(vienChan / inventory.thung);
+              if (vienPerThung > 0) {
+                const sizeText = String(entry.size || "").toLowerCase().replaceAll(" ", "");
+              const parts = sizeText.split("x").map(Number);
+              let m2Text = "";
+              if (parts.length === 2 && parts[0] && parts[1]) {
+                const m2PerTile = (parts[0] * parts[1]) / 10000;
+                const m2PerBox = m2PerTile * vienPerThung;
+                m2Text = ` • ${m2PerBox.toFixed(2)} m²/thùng`;
+              }
+              quyCach = ` • ${vienPerThung} viên/thùng${m2Text}`;
+              }
+            }
+            stockText = ` - Tồn kho: ${formatNumber(inventory.ton)} viên (${formatNumber(inventory.thung)} thùng${quyCach})`;
+          }
+          const productName = entry.name || "";
+          const meta = (productName ? productName + "<br>" : "") + (entry.price ? entry.price + "<br>" : "") + (entry.size || "") + stockText;
           return `<button type="button" class="date-item date-item-btn" data-code="${entry.code}"><img src="${image}" alt="${entry.code}"><div class="date-item-body"><p class="date-code">${entry.code}</p><div class="date-meta">${meta}</div></div></button>`;
         }).join("");
         resultBox.innerHTML = `<div class="result-body"><div class="top-row"><div><p class="muted">Kích thước</p><h2 class="code" style="font-size:28px;">${selectedSize}</h2></div><span class="stock">${sizeItems.length} mẫu</span></div><div class="related-box" style="margin-top:0; border-top:none; padding-top:0;"><h3 class="related-title">Các mẫu kích thước ${selectedSize}</h3><div class="date-grid">${sizeHtml || '<div class="store-item">Không có mẫu nào</div>'}</div></div></div>`;
@@ -916,10 +979,11 @@
       const unissuedStores = allStores.filter((entry) => !issuedKeys.has(`${normalizeText(entry.store)}|||${normalizeText(entry.area)}`));
       const issuedHtml = issuedStores.map((entry) => `<div class="store-item">${entry.store}${entry.area ? " - " + entry.area : ""}${entry.date ? " - " + entry.date : ""}</div>`).join("");
       const unissuedHtml = unissuedStores.map((entry) => `<div class="store-item">${entry.store}${entry.area ? " - " + entry.area : ""}</div>`).join("");
-      const sizeLabel = (currentResult.size || "Chưa có kích thước") + (currentResult.price ? " - " + currentResult.price : "");
+      const productName = currentResult.name || "";
+      const sizeLabel = (currentResult.size || "Chưa có kích thước") + (currentResult.price ? ` - ${currentResult.price}` : "");
       const imageHtml = currentResult.image ? `<div class="img-box"><img id="productImg" src="${currentResult.image}" alt="${currentResult.code}"></div>` : "";
       const inventoryHtml = renderInventoryMini(currentResult.code);
-      resultBox.innerHTML = `${imageHtml}<div class="result-body"><div class="top-row"><div><p class="muted">Mã gạch</p><h2 class="code">${currentResult.code}</h2></div><span class="stock">${issuedStores.length} cửa hàng</span></div><button type="button" class="size-button" id="sizeButton"><span>${sizeLabel}</span><span class="hint">Xem cùng kích thước</span></button>${inventoryHtml}<div class="info-box"><p class="info-label">Thông tin phát mẫu</p><p class="info-value">${issuedStores.length} nơi đã phát</p></div><div class="store-section"><h3 class="store-section-title">Cửa hàng đã phát</h3><div class="store-list">${issuedHtml || '<div class="store-item">Chưa có dữ liệu</div>'}</div></div><div class="info-box" style="margin-top:12px;"><p class="info-label">Cửa hàng chưa phát</p><p class="info-value">${unissuedStores.length} nơi chưa phát</p></div><div class="store-section"><h3 class="store-section-title">Cửa hàng chưa phát</h3><div class="store-list">${unissuedHtml || '<div class="store-item">Không còn cửa hàng nào</div>'}</div></div></div>`;
+      resultBox.innerHTML = `${imageHtml}<div class="result-body"><div class="top-row"><div><p class="muted">Mã gạch</p><h2 class="code">${currentResult.code}</h2><p class="muted" style="margin-top:6px;font-size:16px;">${productName}</p></div><span class="stock">${issuedStores.length} cửa hàng</span></div><button type="button" class="size-button" id="sizeButton"><span>${sizeLabel}</span><span class="hint">Xem cùng kích thước</span></button>${inventoryHtml}<div class="info-box"><p class="info-label">Thông tin phát mẫu</p><p class="info-value">${issuedStores.length} nơi đã phát</p></div><div class="store-section"><h3 class="store-section-title">Cửa hàng đã phát</h3><div class="store-list">${issuedHtml || '<div class="store-item">Chưa có dữ liệu</div>'}</div></div><div class="info-box" style="margin-top:12px;"><p class="info-label">Cửa hàng chưa phát</p><p class="info-value">${unissuedStores.length} nơi chưa phát</p></div><div class="store-section"><h3 class="store-section-title">Cửa hàng chưa phát</h3><div class="store-list">${unissuedHtml || '<div class="store-item">Không còn cửa hàng nào</div>'}</div></div></div>`;
       const img = document.getElementById("productImg");
       if (img) img.onerror = () => { img.src = FALLBACK_IMAGE; };
       const sizeButton = document.getElementById("sizeButton");
@@ -937,12 +1001,12 @@
     function handleSearch() {
       const raw = codeInput.value.trim();
       const normalized = raw.toUpperCase();
-      const normText = normalizeText(raw);
+      const normText = normalizeText(raw).replaceAll(" ", "");
       searched = true;
       inventoryResultCode = "";
 
-      // Ưu tiên nhận diện ngày trước khi tìm gần đúng theo mã
-      const byDate = rawRows.filter((item) => normalizeText(item.date) === normalizeText(raw));
+      // Tìm theo ngày
+      const byDate = rawRows.filter((item) => normalizeText(item.date).replaceAll(" ", "") === normText);
       if (byDate.length > 0) {
         currentResult = null;
         selectedStoreKey = "";
@@ -952,21 +1016,34 @@
         return;
       }
 
-      const allSearchItems = getAllSearchItems();
-      const byCode = allSearchItems.find((item) => item.code === normalized) || null;
-      if (byCode) {
-        currentResult = byCode;
+      // Tìm theo kích thước trong sheet GIÁ
+      const bySize = giaData.filter((item) => normalizeText(item.size).replaceAll(" ", "") === normText);
+      if (bySize.length > 0) {
+        currentResult = null;
         selectedStoreKey = "";
         selectedStoreMatches = [];
-        selectedSize = byCode.size || "";
+        selectedSize = bySize[0].size || raw;
         renderResult();
         return;
       }
 
-      // Tìm gần đúng theo mã: nhập 255 sẽ ra NB255, ABC255...
+      const allSearchItems = getAllSearchItems();
+
+      // Tìm mã gần đúng trước. Ví dụ nhập 3806 sẽ ra 3806, T3806D, T3806M, T3806N.
       const matchedCodes = normText
-        ? allSearchItems.filter((item) => normalizeText(item.code).includes(normText))
+        ? allSearchItems.filter((item) => normalizeText(item.code).replaceAll(" ", "").includes(normText))
         : [];
+
+      if (matchedCodes.length > 1) {
+        currentResult = null;
+        selectedStoreKey = "";
+        selectedStoreMatches = [];
+        selectedSize = "";
+        inventoryResultCode = "";
+        renderCodeMatches(matchedCodes, raw);
+        return;
+      }
+
       if (matchedCodes.length === 1) {
         currentResult = matchedCodes[0];
         selectedStoreKey = "";
@@ -975,13 +1052,14 @@
         renderResult();
         return;
       }
-      if (matchedCodes.length > 1) {
-        currentResult = null;
+
+      const byCode = allSearchItems.find((item) => normalizeText(item.code).replaceAll(" ", "") === normText) || null;
+      if (byCode) {
+        currentResult = byCode;
         selectedStoreKey = "";
         selectedStoreMatches = [];
-        selectedSize = "";
-        inventoryResultCode = "";
-        renderCodeMatches(matchedCodes, raw);
+        selectedSize = byCode.size || "";
+        renderResult();
         return;
       }
 
@@ -995,7 +1073,11 @@
         return;
       }
 
-      const matchedStores = allStores.filter((s) => normalizeText(s.store).includes(normText));
+      const matchedStores = allStores.filter((s) => {
+        const storeText = normalizeText(s.store).replaceAll(" ", "");
+        const areaText = normalizeText(s.area).replaceAll(" ", "");
+        return storeText.includes(normText) || areaText.includes(normText);
+      });
       if (normText && matchedStores.length === 1) {
         currentResult = null;
         selectedSize = "";
@@ -1009,16 +1091,6 @@
         selectedSize = "";
         selectedStoreKey = "";
         selectedStoreMatches = matchedStores;
-        renderResult();
-        return;
-      }
-
-      const bySize = allSearchItems.filter((item) => normalizeText(item.size) === normalizeText(normalized));
-      if (bySize.length > 0) {
-        currentResult = null;
-        selectedStoreKey = "";
-        selectedStoreMatches = [];
-        selectedSize = bySize[0].size || normalized;
         renderResult();
         return;
       }
@@ -1110,92 +1182,59 @@
       // 👉 viên điểm (trừ khỏi tổng)
       const diemBox = Number(document.getElementById("calcDiemBox").value) || 0;
       const diemPrice = Number(document.getElementById("calcDiemPrice").value) || 0;
-      const diemTiles = diemBox * tilesPerBox;
+      const diemTiles = Math.min(diemBox * tilesPerBox, totalTiles);
+      const normalTiles = totalTiles - diemTiles;
+      const normalM2 = normalTiles * areaPerTile;
 
-      // trừ viên điểm ra khỏi gạch thường
-      let normalTiles = totalTiles - diemTiles;
-      if (normalTiles < 0) normalTiles = 0;
+      let normalTotal = 0;
+      if (priceValue > 0) {
+        if (priceType === "m2") normalTotal = normalM2 * priceValue;
+        if (priceType === "box") normalTotal = (normalTiles / tilesPerBox) * priceValue;
+        if (priceType === "tile") normalTotal = normalTiles * priceValue;
+      }
+      const diemTotal = diemTiles * diemPrice;
+      const moneyTotal = normalTotal + diemTotal;
 
-      const normalBoxes = Math.floor(normalTiles / tilesPerBox);
-      const normalRemain = normalTiles % tilesPerBox;
-      const normalBoxDecimal = normalTiles / tilesPerBox;
-
-      // tiền gạch thường
-      let normalMoney = 0;
-      if (priceType === "m2") normalMoney = (normalTiles * areaPerTile) * priceValue;
-      else if (priceType === "box") normalMoney = normalBoxDecimal * priceValue;
-      else if (priceType === "tile") normalMoney = normalTiles * priceValue;
-
-      // tiền điểm
-      const diemMoney = diemTiles * diemPrice;
-
-      const totalMoney = normalMoney + diemMoney;
 
       document.getElementById("calcResult").innerHTML = `
-        <h3 class="calc-result-title">Kết quả</h3>
+        <h3 class="calc-result-title">Kết quả tính</h3>
         <div class="calc-result-grid">
-          <div class="calc-kpi"><p class="calc-kpi-label">1 viên</p><p class="calc-kpi-value">${areaPerTile.toFixed(3)} m²</p></div>
-          <div class="calc-kpi"><p class="calc-kpi-label">1 thùng</p><p class="calc-kpi-value">${m2PerBox.toFixed(2)} m²</p></div>
-          <div class="calc-kpi"><p class="calc-kpi-label">Tổng m²</p><p class="calc-kpi-value">${totalM2.toFixed(2)}</p></div>
+          <div class="calc-kpi"><p class="calc-kpi-label">Diện tích / viên</p><p class="calc-kpi-value">${areaPerTile.toFixed(4)} m²</p></div>
+          <div class="calc-kpi"><p class="calc-kpi-label">Diện tích / thùng</p><p class="calc-kpi-value">${m2PerBox.toFixed(2)} m²</p></div>
           <div class="calc-kpi"><p class="calc-kpi-label">Tổng viên</p><p class="calc-kpi-value">${formatNumber(totalTiles)}</p></div>
-          <div class="calc-kpi"><p class="calc-kpi-label">Quy đổi</p><p class="calc-kpi-value">${fullBoxes} thùng + ${remainTiles} viên</p></div>
-          <div class="calc-kpi"><p class="calc-kpi-label">Tính tiền theo</p><p class="calc-kpi-value">${priceType === "m2" ? "m²" : (priceType === "box" ? "thùng" : "viên")}</p></div>
+          <div class="calc-kpi"><p class="calc-kpi-label">Tổng m²</p><p class="calc-kpi-value">${totalM2.toFixed(2)}</p></div>
+          <div class="calc-kpi"><p class="calc-kpi-label">Số thùng</p><p class="calc-kpi-value">${boxDecimal.toFixed(2)}</p></div>
+          <div class="calc-kpi"><p class="calc-kpi-label">Quy đổi</p><p class="calc-kpi-value">${fullBoxes} thùng ${remainTiles} viên</p></div>
+          <div class="calc-kpi"><p class="calc-kpi-label">Viên thường</p><p class="calc-kpi-value">${formatNumber(normalTiles)}</p></div>
+          <div class="calc-kpi"><p class="calc-kpi-label">Viên điểm</p><p class="calc-kpi-value">${formatNumber(diemTiles)}</p></div>
         </div>
-        <div class="calc-total">
-          <p>Tiền gạch thường</p>
-          <p>${formatMoney(normalMoney)}</p>
-          <p>Tiền viên điểm</p>
-          <p>${formatMoney(diemMoney)}</p>
-          <p class="calc-total-value">Tổng: ${formatMoney(totalMoney)}</p>
-        </div>
+        <div class="calc-total"><p>Tổng tiền</p><p class="calc-total-value">${formatMoney(moneyTotal)}</p></div>
       `;
     }
 
-    function setupCalcTab() {
-      const sizeSelect = document.getElementById("calcSizeSelect");
-      const customSize = document.getElementById("calcCustomSize");
-      const inputType = document.getElementById("calcInputType");
-      const inputLabel = document.getElementById("calcInputLabel");
-      const calcBtn = document.getElementById("calcBtn");
-
-      sizeSelect.addEventListener("change", () => {
-        customSize.style.display = sizeSelect.value === "custom" ? "block" : "none";
-      });
-      inputType.addEventListener("change", () => {
-        inputLabel.textContent = inputType.value === "m2" ? "Số m² cần dùng" : "Số thùng cần tính";
-      });
-      calcBtn.addEventListener("click", calculateTiles);
-    }
-
-    searchBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      handleSearch();
-      setTimeout(() => codeInput.focus(), 0);
-    });
-    codeInput.addEventListener("keydown", (e) => { if (e.key === "Enter") handleSearch(); });
-    // 🔥 TẮT realtime khi gõ (fix mobile)
-    // Chỉ tìm khi bấm nút hoặc Enter
-    codeInput.addEventListener("input", () => {
-      // Không render lại liên tục nữa để tránh giật bàn phím trên điện thoại
+    document.getElementById("calcSizeSelect").addEventListener("change", () => {
+      const custom = document.getElementById("calcCustomSize");
+      custom.style.display = document.getElementById("calcSizeSelect").value === "custom" ? "block" : "none";
     });
 
+    document.getElementById("calcInputType").addEventListener("change", () => {
+      document.getElementById("calcInputLabel").textContent = document.getElementById("calcInputType").value === "m2" ? "Số m² cần dùng" : "Số thùng cần dùng";
+    });
+
+    document.getElementById("calcBtn").addEventListener("click", calculateTiles);
+
+    searchBtn.addEventListener("click", handleSearch);
+    codeInput.addEventListener("keydown", (event) => { if (event.key === "Enter") handleSearch(); });
     tabMarketBtn.addEventListener("click", () => switchTab("market"));
     tabStockBtn.addEventListener("click", () => switchTab("stock"));
     tabCalcBtn.addEventListener("click", () => switchTab("calc"));
 
-    async function initApp() {
-      renderResult();
-
-      // Quan trọng: phải load sheet GIÁ trước,
-      // rồi mới load sheet chính để gộp giá + kích thước + hình ảnh theo mã.
+    (async function init() {
+      showLoading(true);
       await loadGia();
-      await Promise.all([loadSheet(), loadTonKho()]);
-
-      renderResult();
-    }
-
-    setupCalcTab();
-    initApp();
+      await loadTonKho();
+      await loadSheet();
+    })();
   </script>
 </body>
 </html>
