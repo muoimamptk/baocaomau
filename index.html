@@ -130,11 +130,11 @@
       <div id="loadingAlert" class="alert loading">Đang tải dữ liệu từ Tiền Minh Chiến</div>
       <div id="errorAlert" class="alert error">Không đọc được dữ liệu từ Tiền Minh Chiến</div>
 
-      <label for="codeInput">Nhập mã, ngày, kích thước hoặc tên cửa hàng</label>
+      <label for="codeInput">Nhập mã, ngày, kích thước, tên hãng, chất liệu hoặc tên cửa hàng</label>
       <div class="search-row">
         <div class="input-wrap">
           <div class="search-icon">🔎</div>
-          <input id="codeInput" value="" placeholder="Tìm mã hoặc tên hàng" inputmode="search" />
+          <input id="codeInput" value="" placeholder="Ví dụ: 60x60 ACERA hoặc 60x60 ĐÁ" inputmode="search" />
         </div>
         <button type="button" class="btn-primary" id="searchBtn">Tra cứu</button>
       </div>
@@ -304,13 +304,24 @@
       return id ? `https://opensheet.elk.sh/${id}/${encodeURIComponent("GIÁ")}` : "";
     }
 
+    function getValueAnyKey(row, names) {
+      for (const name of names) {
+        if (row[name] !== undefined) return row[name];
+        const found = Object.keys(row).find(k => normalizeText(k) === normalizeText(name));
+        if (found) return row[found];
+      }
+      return "";
+    }
+
     function mapGiaRows(rows) {
       return rows.map(r => ({
-        code: String(r["Mã hàng"] || r["Ma hang"] || "").trim().toUpperCase(),
-        size: r["Kích thước"] || r["Kích thướt"] || r["Kich thuoc"] || r["Kich thuot"] || r["KT"] || r["kt"] || "",
-        price: r["Giá tiền"] || r["Gia tien"] || "",
-        image: r["Hình ảnh"] || r["Hinh anh"] || "",
-        name: r["Tên hàng"] || r["Ten hang"] || ""
+        code: String(getValueAnyKey(r, ["Mã hàng", "Ma hang", "Mã", "Ma"]) || "").trim().toUpperCase(),
+        size: getValueAnyKey(r, ["Kích thước", "Kích thướt", "Kich thuoc", "Kich thuot", "KT", "kt"]),
+        price: getValueAnyKey(r, ["Giá tiền", "Gia tien", "Giá", "Gia"]),
+        image: getValueAnyKey(r, ["Hình ảnh", "Hinh anh", "Ảnh", "Anh"]),
+        name: getValueAnyKey(r, ["Tên hàng", "Ten hang", "Tên", "Ten"]),
+        brand: getValueAnyKey(r, ["Tên Hãng", "Tên hãng", "Ten Hang", "Ten hang", "Hãng", "Hang"]),
+        material: getValueAnyKey(r, ["Chất Liệu", "Chất liệu", "Chat Lieu", "Chat lieu", "Chất", "Chat"])
       })).filter(r => r.code);
     }
 
@@ -773,6 +784,8 @@
         price: g.price || "",
         image: g.image || "",
         name: g.name || "",
+        brand: g.brand || "",
+        material: g.material || "",
         stores: []
       };
     }
@@ -867,7 +880,10 @@
         }
         const gia = findGiaByCode(item.code);
         const productName = gia && gia.name ? gia.name : "";
-        const meta = `${productName ? productName + "<br>" : ""}${item.price ? item.price + "<br>" : ""}${item.size || "Chưa có kích thước"}<br>${stockText}`;
+        const brandText = item.brand || (gia && gia.brand ? gia.brand : "");
+        const materialText = item.material || (gia && gia.material ? gia.material : "");
+        const extraText = `${brandText ? "Hãng: " + brandText + "<br>" : ""}${materialText ? "Chất liệu: " + materialText + "<br>" : ""}`;
+        const meta = `${productName ? productName + "<br>" : ""}${extraText}${item.price ? item.price + "<br>" : ""}${item.size || "Chưa có kích thước"}<br>${stockText}`;
         return `<button type="button" class="match-btn" data-code="${item.code}"><img src="${image}" alt="${item.code}"><div class="match-body"><p class="match-code">${item.code}</p><div class="match-meta">${meta}</div></div></button>`;
       }).join("");
 
@@ -926,7 +942,7 @@
         return;
       }
       if (!currentResult && !selectedSize && !selectedStoreKey && !searched) {
-        resultBox.innerHTML = `<div class="empty"><div class="empty-icon">🔎</div><h2>Chưa tra cứu</h2><p>Nhập mã gạch(w24204), ngày(06-04-26), kích thước (60x60) hoặc tên cửa hàng để xem kết quả.</p></div>`;
+        resultBox.innerHTML = `<div class="empty"><div class="empty-icon">🔎</div><h2>Chưa tra cứu</h2><p>Nhập mã gạch(w24204), ngày(06-04-26), kích thước (60x60), hãng/chất liệu (ACERA, ĐÁ) hoặc tên cửa hàng để xem kết quả.</p></div>`;
         return;
       }
       if (!currentResult && selectedStoreKey) {
@@ -1007,7 +1023,8 @@
             stockText = ` - Tồn kho: ${formatNumber(inventory.ton)} viên (${formatNumber(inventory.thung)} thùng${quyCach})`;
           }
           const productName = entry.name || "";
-          const meta = (productName ? productName + "<br>" : "") + (entry.price ? entry.price + "<br>" : "") + (entry.size || "") + stockText;
+          const extraText = `${entry.brand ? "Hãng: " + entry.brand + "<br>" : ""}${entry.material ? "Chất liệu: " + entry.material + "<br>" : ""}`;
+          const meta = (productName ? productName + "<br>" : "") + extraText + (entry.price ? entry.price + "<br>" : "") + (entry.size || "") + stockText;
           return `<button type="button" class="date-item date-item-btn" data-code="${entry.code}"><img src="${image}" alt="${entry.code}"><div class="date-item-body"><p class="date-code">${entry.code}</p><div class="date-meta">${meta}</div></div></button>`;
         }).join("");
         resultBox.innerHTML = `<div class="result-body"><div class="top-row"><div><p class="muted">Kích thước</p><h2 class="code" style="font-size:28px;">${selectedSize}</h2></div><span class="stock">${sizeItems.length} mẫu</span></div><div class="related-box" style="margin-top:0; border-top:none; padding-top:0;"><h3 class="related-title">Các mẫu kích thước ${selectedSize}</h3><div class="date-grid">${sizeHtml || '<div class="store-item">Không có mẫu nào</div>'}</div></div></div>`;
@@ -1032,10 +1049,11 @@
       const issuedHtml = issuedStores.map((entry) => `<div class="store-item">${entry.store}${entry.area ? " - " + entry.area : ""}${entry.date ? " - " + entry.date : ""}</div>`).join("");
       const unissuedHtml = unissuedStores.map((entry) => `<div class="store-item">${entry.store}${entry.area ? " - " + entry.area : ""}</div>`).join("");
       const productName = currentResult.name || "";
+      const brandMaterialHtml = `${currentResult.brand ? `<div class="contact-line"><strong>Hãng:</strong> ${currentResult.brand}</div>` : ""}${currentResult.material ? `<div class="contact-line"><strong>Chất liệu:</strong> ${currentResult.material}</div>` : ""}`;
       const sizeLabel = (currentResult.size || "Chưa có kích thước") + (currentResult.price ? ` - ${currentResult.price}` : "");
       const imageHtml = currentResult.image ? `<div class="img-box"><img id="productImg" src="${currentResult.image}" alt="${currentResult.code}"></div>` : "";
       const inventoryHtml = renderInventoryMini(currentResult.code);
-      resultBox.innerHTML = `${imageHtml}<div class="result-body"><div class="top-row"><div><p class="muted">Mã gạch</p><h2 class="code">${currentResult.code}</h2><p class="muted" style="margin-top:6px;font-size:16px;">${productName}</p></div><span class="stock">${issuedStores.length} cửa hàng</span></div><button type="button" class="size-button" id="sizeButton"><span>${sizeLabel}</span><span class="hint">Xem cùng kích thước</span></button>${inventoryHtml}<div class="info-box"><p class="info-label">Thông tin phát mẫu</p><p class="info-value">${issuedStores.length} nơi đã phát</p></div><div class="store-section"><h3 class="store-section-title">Cửa hàng đã phát</h3><div class="store-list">${issuedHtml || '<div class="store-item">Chưa có dữ liệu</div>'}</div></div><div class="info-box" style="margin-top:12px;"><p class="info-label">Cửa hàng chưa phát</p><p class="info-value">${unissuedStores.length} nơi chưa phát</p></div><div class="store-section"><h3 class="store-section-title">Cửa hàng chưa phát</h3><div class="store-list">${unissuedHtml || '<div class="store-item">Không còn cửa hàng nào</div>'}</div></div></div>`;
+      resultBox.innerHTML = `${imageHtml}<div class="result-body"><div class="top-row"><div><p class="muted">Mã gạch</p><h2 class="code">${currentResult.code}</h2><p class="muted" style="margin-top:6px;font-size:16px;">${productName}</p></div><span class="stock">${issuedStores.length} cửa hàng</span></div>${brandMaterialHtml}<button type="button" class="size-button" id="sizeButton"><span>${sizeLabel}</span><span class="hint">Xem cùng kích thước</span></button>${inventoryHtml}<div class="info-box"><p class="info-label">Thông tin phát mẫu</p><p class="info-value">${issuedStores.length} nơi đã phát</p></div><div class="store-section"><h3 class="store-section-title">Cửa hàng đã phát</h3><div class="store-list">${issuedHtml || '<div class="store-item">Chưa có dữ liệu</div>'}</div></div><div class="info-box" style="margin-top:12px;"><p class="info-label">Cửa hàng chưa phát</p><p class="info-value">${unissuedStores.length} nơi chưa phát</p></div><div class="store-section"><h3 class="store-section-title">Cửa hàng chưa phát</h3><div class="store-list">${unissuedHtml || '<div class="store-item">Không còn cửa hàng nào</div>'}</div></div></div>`;
       const img = document.getElementById("productImg");
       if (img) img.onerror = () => { img.src = FALLBACK_IMAGE; };
       const sizeButton = document.getElementById("sizeButton");
@@ -1048,6 +1066,100 @@
           renderResult();
         };
       }
+    }
+
+    function removeVietnameseSigns(text) {
+      return String(text || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d")
+        .replace(/Đ/g, "D");
+    }
+
+    function normalizeSearchText(text) {
+      return removeVietnameseSigns(text).toLowerCase().trim().replace(/\s+/g, " ");
+    }
+
+    function normalizeSearchCompact(text) {
+      return normalizeSearchText(text).replace(/[^a-z0-9]/g, "");
+    }
+
+    function levenshteinDistance(a, b) {
+      a = normalizeSearchCompact(a);
+      b = normalizeSearchCompact(b);
+      if (a === b) return 0;
+      if (!a || !b) return Math.max(a.length, b.length);
+      const dp = Array.from({ length: a.length + 1 }, () => Array(b.length + 1).fill(0));
+      for (let i = 0; i <= a.length; i++) dp[i][0] = i;
+      for (let j = 0; j <= b.length; j++) dp[0][j] = j;
+      for (let i = 1; i <= a.length; i++) {
+        for (let j = 1; j <= b.length; j++) {
+          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+          dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+        }
+      }
+      return dp[a.length][b.length];
+    }
+
+    function fuzzyMatchTerm(value, term) {
+      const v = normalizeSearchCompact(value);
+      const t = normalizeSearchCompact(term);
+      if (!t) return true;
+      if (!v) return false;
+      if (v.includes(t) || t.includes(v)) return true;
+      if (t.length < 3) return false;
+      const words = normalizeSearchText(value).split(/[^a-z0-9]+/).filter(Boolean);
+      return words.some(w => {
+        if (w.includes(t) || t.includes(w)) return true;
+        const maxDistance = t.length <= 5 ? 1 : 2;
+        return levenshteinDistance(w, t) <= maxDistance;
+      });
+    }
+
+    function splitSearchTerms(raw) {
+      return normalizeSearchText(raw)
+        .split(/[\s,;|+]+/)
+        .map(t => t.trim())
+        .filter(Boolean);
+    }
+
+    function isSizeSearchTerm(term) {
+      return /^\d{2,3}x\d{2,3}$/.test(normalizeSearchCompact(term));
+    }
+
+    function strictSizeMatch(sizeValue, term) {
+      return normalizeSearchCompact(sizeValue) === normalizeSearchCompact(term);
+    }
+
+    function strictOrFuzzyBrandMaterialMatch(item, term) {
+      // Tên hãng / chất liệu cho phép sai nhẹ, nhưng KHÔNG so với cột giá để tránh ra quá nhiều mẫu.
+      const brand = item.brand || "";
+      const material = item.material || "";
+      if (fuzzyMatchTerm(brand, term) || fuzzyMatchTerm(material, term)) return true;
+
+      // Vẫn cho tìm theo tên hàng / mã hàng, nhưng chỉ theo kiểu chứa chữ, không fuzzy rộng.
+      const t = normalizeSearchCompact(term);
+      const name = normalizeSearchCompact(item.name || "");
+      const code = normalizeSearchCompact(item.code || "");
+      return (!!t && (name.includes(t) || code.includes(t)));
+    }
+
+    function itemMatchesAdvancedSearch(item, raw) {
+      const terms = splitSearchTerms(raw);
+      if (!terms.length) return false;
+
+      const sizeTerms = terms.filter(isSizeSearchTerm);
+      const otherTerms = terms.filter(t => !isSizeSearchTerm(t));
+
+      // Nếu có kích thước trong câu tìm kiếm, bắt buộc kích thước phải khớp chính xác.
+      if (sizeTerms.length && !sizeTerms.every(t => strictSizeMatch(item.size, t))) return false;
+
+      // Các từ còn lại lọc theo Tên Hãng / Chất Liệu / Tên hàng / Mã hàng.
+      if (otherTerms.length) {
+        return otherTerms.every(term => strictOrFuzzyBrandMaterialMatch(item, term));
+      }
+
+      return sizeTerms.length > 0;
     }
 
     function handleSearch() {
@@ -1093,6 +1205,21 @@
         selectedSize = "";
         inventoryResultCode = "";
         renderCodeMatches(matchedCodes, raw);
+        return;
+      }
+
+      // Tìm nâng cao theo nhiều điều kiện: ví dụ "60x60 ACERA", "60x60 ĐÁ", "ACER".
+      // Có hỗ trợ sai nhẹ ký tự tên hãng/chất liệu/tên hàng.
+      const advancedMatches = raw
+        ? allSearchItems.filter((item) => itemMatchesAdvancedSearch(item, raw))
+        : [];
+      if (advancedMatches.length > 0) {
+        currentResult = null;
+        selectedStoreKey = "";
+        selectedStoreMatches = [];
+        selectedSize = "";
+        inventoryResultCode = "";
+        renderCodeMatches(advancedMatches, raw);
         return;
       }
 
