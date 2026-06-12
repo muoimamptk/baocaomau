@@ -30,6 +30,17 @@
     .result-body { padding: 16px; }
     .img-box { width: 100%; height: 260px; background: white; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #e2e8f0; }
     .img-box img { width: 100%; height: 100%; object-fit: contain; background: white; }
+    .download-image-btn { position: absolute; top: 8px; right: 8px; background: rgba(37,99,235,0.92); color: white; border: none; padding: 5px 8px; border-radius: 10px; font-size: 12px; font-weight: 700; line-height: 1; box-shadow: 0 4px 10px rgba(15,23,42,0.18); z-index: 2; cursor: pointer; }
+    .card-code-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .card-download-btn { flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:9px; background:#2563eb; color:white; border:none; font-size:14px; line-height:1; box-shadow:0 3px 8px rgba(37,99,235,0.22); cursor:pointer; padding:0; }
+
+    .product-filters { margin-top: 12px; border-top: 1px dashed #e2e8f0; padding-top: 12px; }
+    .filter-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .filter-select { width: 100%; border: 1px solid #cbd5e1; border-radius: 14px; padding: 9px 10px; font-size: 14px; outline: none; background: white; color: #0f172a; }
+    .filter-select:focus { border-color: #64748b; }
+    .filter-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+    .filter-note { font-size: 12px; color: #64748b; line-height: 1.35; }
+    .filter-clear-btn { border-radius: 12px; padding: 8px 10px; font-size: 13px; font-weight: 700; color: #334155; background: #f1f5f9; border: 1px solid #e2e8f0; white-space: nowrap; }
     .top-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
     .muted { color: #64748b; font-size: 14px; margin: 0 0 4px; }
     .code { font-size: 34px; font-weight: 700; margin: 0; }
@@ -137,6 +148,19 @@
           <input id="codeInput" value="" placeholder="" inputmode="search" />
         </div>
         <button type="button" class="btn-primary" id="searchBtn">Tra cứu</button>
+      </div>
+
+      <div class="product-filters">
+        <div class="filter-grid">
+          <select id="filterSize" class="filter-select"><option value="">Kích thước</option></select>
+          <select id="filterBrand" class="filter-select"><option value="">Hãng</option></select>
+          <select id="filterMaterial" class="filter-select"><option value="">Chất liệu</option></select>
+          <select id="filterType" class="filter-select"><option value="">Loại</option></select>
+        </div>
+        <div class="filter-actions">
+          <div class="filter-note">Có thể chọn bộ lọc hoặc nhập mã/tên hàng như cũ.</div>
+          <button type="button" class="filter-clear-btn" id="clearFiltersBtn">Xóa lọc</button>
+        </div>
       </div>
     </div>
 
@@ -259,6 +283,26 @@
     const calcBox = document.getElementById("calcBox");
     const footerBox = document.getElementById("footerBox");
 
+    async function downloadImageFast(url, filename) {
+      try {
+        if (!url) return;
+        const response = await fetch(url, { mode: "cors", cache: "no-store" });
+        if (!response.ok) throw new Error("download failed");
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = filename || "hinh-anh.jpg";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 1000);
+      } catch (error) {
+        // Nếu trình duyệt chặn tải ảnh ngoài domain, mở ảnh để người dùng nhấn giữ lưu ảnh.
+        window.open(url, "_blank", "noopener");
+      }
+    }
+
     function normalizeText(text) { return String(text || "").trim().toLowerCase(); }
     function toDisplayText(text) {
       const value = String(text || "").trim().toLowerCase();
@@ -321,7 +365,8 @@
         image: getValueAnyKey(r, ["Hình ảnh", "Hinh anh", "Ảnh", "Anh"]),
         name: getValueAnyKey(r, ["Tên hàng", "Ten hang", "Tên", "Ten"]),
         brand: getValueAnyKey(r, ["Tên Hãng", "Tên hãng", "Ten Hang", "Ten hang", "Hãng", "Hang"]),
-        material: getValueAnyKey(r, ["Chất Liệu", "Chất liệu", "Chat Lieu", "Chat lieu", "Chất", "Chat"])
+        material: getValueAnyKey(r, ["Chất Liệu", "Chất liệu", "Chat Lieu", "Chat lieu", "Chất", "Chat"]),
+        type: getValueAnyKey(r, ["Loại", "loại", "Loai", "loai", "Type", "type"])
       })).filter(r => r.code);
     }
 
@@ -333,6 +378,7 @@
         if (!res.ok) throw new Error();
         const json = await res.json();
         giaData = mapGiaRows(json);
+        renderProductFilters();
       } catch (e) {
         giaData = [];
         console.error("Lỗi load giá:", e);
@@ -662,6 +708,9 @@
           item.price = g.price || "";
           item.image = g.image || "";
           item.name = g.name || "";
+          item.brand = g.brand || "";
+          item.material = g.material || "";
+          item.type = g.type || "";
         }
       });
 
@@ -752,7 +801,7 @@
           const image = item.image || FALLBACK_IMAGE;
           const latestDateRow = rawRows.filter(r => String(r.code || '').trim().toUpperCase() === item.code).sort((a,b)=>(b.dateValue||0)-(a.dateValue||0))[0];
           const latestDate = latestDateRow && latestDateRow.date ? `<br>Phát: ${latestDateRow.date}` : "";
-          return `<div class="date-item"><img src="${image}" alt="${item.code}"><div class="date-item-body"><p class="date-code">${item.code}</p><div class="date-meta">${group.size}${latestDate}</div></div></div>`;
+          return `<div class="date-item"><img src="${image}" alt="${item.code}"><div class="date-item-body"><div class="card-code-row"><p class="date-code">${item.code}</p><button type="button" class="card-download-btn" onclick="event.stopPropagation(); downloadImageFast('${image}', '${item.code}.jpg')" title="Tải ảnh">📥</button></div><div class="date-meta">${group.size}${latestDate}</div></div></div>`;
         }).join("");
         return `<div class="related-box" style="margin-top:14px;"><h3 class="related-title">${group.size}</h3><div class="date-grid">${itemsHtml}</div></div>`;
       }).join("");
@@ -786,6 +835,7 @@
         name: g.name || "",
         brand: g.brand || "",
         material: g.material || "",
+        type: g.type || "",
         stores: []
       };
     }
@@ -882,9 +932,10 @@
         const productName = gia && gia.name ? gia.name : "";
         const brandText = item.brand || (gia && gia.brand ? gia.brand : "");
         const materialText = item.material || (gia && gia.material ? gia.material : "");
-        const extraText = `${brandText ? "Hãng: " + brandText + "<br>" : ""}${materialText ? "Chất liệu: " + materialText + "<br>" : ""}`;
+        const typeText = item.type || (gia && gia.type ? gia.type : "");
+        const extraText = `${brandText ? "Hãng: " + brandText + "<br>" : ""}${materialText ? "Chất liệu: " + materialText + "<br>" : ""}${typeText ? "Loại: " + typeText + "<br>" : ""}`;
         const meta = `${productName ? productName + "<br>" : ""}${extraText}${item.price ? item.price + "<br>" : ""}${item.size || "Chưa có kích thước"}<br>${stockText}`;
-        return `<button type="button" class="match-btn" data-code="${item.code}"><img src="${image}" alt="${item.code}"><div class="match-body"><p class="match-code">${item.code}</p><div class="match-meta">${meta}</div></div></button>`;
+        return `<div role="button" tabindex="0" class="match-btn" data-code="${item.code}"><img src="${image}" alt="${item.code}"><div class="match-body"><div class="card-code-row"><p class="match-code">${item.code}</p><button type="button" class="card-download-btn" onclick="event.stopPropagation(); downloadImageFast('${image}', '${item.code}.jpg')" title="Tải ảnh">📥</button></div><div class="match-meta">${meta}</div></div></div>`;
       }).join("");
 
       resultBox.innerHTML = `
@@ -942,7 +993,7 @@
         return;
       }
       if (!currentResult && !selectedSize && !selectedStoreKey && !searched) {
-        resultBox.innerHTML = `<div class="empty"><div class="empty-icon">🔎</div><h2>Chưa tra cứu</h2><p>Nhập mã gạch(w24204), ngày(06-04-26), kích thước (60x60), hãng/chất liệu (ACERA, ĐÁ) hoặc tên cửa hàng để xem kết quả.</p></div>`;
+        resultBox.innerHTML = `<div class="empty"><div class="empty-icon">🔎</div><h2>Chưa tra cứu</h2><p>Nhập mã gạch(w24204), ngày(06-04-26), kích thước (60x60), hãng/chất liệu (ACERA, ĐÁ, MEN) hoặc tên cửa hàng để xem kết quả.</p></div>`;
         return;
       }
       if (!currentResult && selectedStoreKey) {
@@ -970,7 +1021,7 @@
           });
           const dailyGallery = Array.from(dailyCodeMap.values()).map((item) => {
             const image = item.image || FALLBACK_IMAGE;
-            return `<div class="date-item"><img src="${image}" alt="${item.code}"><div class="date-item-body"><p class="date-code">${item.code}</p><div class="date-meta">${item.size || ""}</div></div></div>`;
+            return `<div class="date-item"><img src="${image}" alt="${item.code}"><div class="date-item-body"><div class="card-code-row"><p class="date-code">${item.code}</p><button type="button" class="card-download-btn" onclick="event.stopPropagation(); downloadImageFast('${image}', '${item.code}.jpg')" title="Tải ảnh">📥</button></div><div class="date-meta">${item.size || ""}</div></div></div>`;
           }).join("");
           const issuedKeys = new Set(dateStores.map((entry) => `${normalizeText(entry.store)}|||${normalizeText(entry.area)}`));
           const unissuedStores = allStores.filter((entry) => !issuedKeys.has(`${normalizeText(entry.store)}|||${normalizeText(entry.area)}`));
@@ -1023,9 +1074,9 @@
             stockText = ` - Tồn kho: ${formatNumber(inventory.ton)} viên (${formatNumber(inventory.thung)} thùng${quyCach})`;
           }
           const productName = entry.name || "";
-          const extraText = `${entry.brand ? "Hãng: " + entry.brand + "<br>" : ""}${entry.material ? "Chất liệu: " + entry.material + "<br>" : ""}`;
+          const extraText = `${entry.brand ? "Hãng: " + entry.brand + "<br>" : ""}${entry.material ? "Chất liệu: " + entry.material + "<br>" : ""}${entry.type ? "Loại: " + entry.type + "<br>" : ""}`;
           const meta = (productName ? productName + "<br>" : "") + extraText + (entry.price ? entry.price + "<br>" : "") + (entry.size || "") + stockText;
-          return `<button type="button" class="date-item date-item-btn" data-code="${entry.code}"><img src="${image}" alt="${entry.code}"><div class="date-item-body"><p class="date-code">${entry.code}</p><div class="date-meta">${meta}</div></div></button>`;
+          return `<div role="button" tabindex="0" class="date-item date-item-btn" data-code="${entry.code}"><img src="${image}" alt="${entry.code}"><div class="date-item-body"><div class="card-code-row"><p class="date-code">${entry.code}</p><button type="button" class="card-download-btn" onclick="event.stopPropagation(); downloadImageFast('${image}', '${entry.code}.jpg')" title="Tải ảnh">📥</button></div><div class="date-meta">${meta}</div></div></div>`;
         }).join("");
         resultBox.innerHTML = `<div class="result-body"><div class="top-row"><div><p class="muted">Kích thước</p><h2 class="code" style="font-size:28px;">${selectedSize}</h2></div><span class="stock">${sizeItems.length} mẫu</span></div><div class="related-box" style="margin-top:0; border-top:none; padding-top:0;"><h3 class="related-title">Các mẫu kích thước ${selectedSize}</h3><div class="date-grid">${sizeHtml || '<div class="store-item">Không có mẫu nào</div>'}</div></div></div>`;
         resultBox.querySelectorAll('.date-item-btn[data-code]').forEach((btn) => {
@@ -1049,9 +1100,9 @@
       const issuedHtml = issuedStores.map((entry) => `<div class="store-item">${entry.store}${entry.area ? " - " + entry.area : ""}${entry.date ? " - " + entry.date : ""}</div>`).join("");
       const unissuedHtml = unissuedStores.map((entry) => `<div class="store-item">${entry.store}${entry.area ? " - " + entry.area : ""}</div>`).join("");
       const productName = currentResult.name || "";
-      const brandMaterialHtml = `${currentResult.brand ? `<div class="contact-line"><strong>Hãng:</strong> ${currentResult.brand}</div>` : ""}${currentResult.material ? `<div class="contact-line"><strong>Chất liệu:</strong> ${currentResult.material}</div>` : ""}`;
+      const brandMaterialHtml = `${currentResult.brand ? `<div class="contact-line"><strong>Hãng:</strong> ${currentResult.brand}</div>` : ""}${currentResult.material ? `<div class="contact-line"><strong>Chất liệu:</strong> ${currentResult.material}</div>` : ""}${currentResult.type ? `<div class="contact-line"><strong>Loại:</strong> ${currentResult.type}</div>` : ""}`;
       const sizeLabel = (currentResult.size || "Chưa có kích thước") + (currentResult.price ? ` - ${currentResult.price}` : "");
-      const imageHtml = currentResult.image ? `<div class="img-box"><img id="productImg" src="${currentResult.image}" alt="${currentResult.code}"></div>` : "";
+      const imageHtml = currentResult.image ? `<div class="img-box" style="position:relative;"><img id="productImg" src="${currentResult.image}" alt="${currentResult.code}"><button type="button" class="download-image-btn" onclick="downloadImageFast('${currentResult.image}', '${currentResult.code}.jpg')" title="Tải ảnh">📥</button></div>` : "";
       const inventoryHtml = renderInventoryMini(currentResult.code);
       resultBox.innerHTML = `${imageHtml}<div class="result-body"><div class="top-row"><div><p class="muted">Mã gạch</p><h2 class="code">${currentResult.code}</h2><p class="muted" style="margin-top:6px;font-size:16px;">${productName}</p></div><span class="stock">${issuedStores.length} cửa hàng</span></div>${brandMaterialHtml}<button type="button" class="size-button" id="sizeButton"><span>${sizeLabel}</span><span class="hint">Xem cùng kích thước</span></button>${inventoryHtml}<div class="info-box"><p class="info-label">Thông tin phát mẫu</p><p class="info-value">${issuedStores.length} nơi đã phát</p></div><div class="store-section"><h3 class="store-section-title">Cửa hàng đã phát</h3><div class="store-list">${issuedHtml || '<div class="store-item">Chưa có dữ liệu</div>'}</div></div><div class="info-box" style="margin-top:12px;"><p class="info-label">Cửa hàng chưa phát</p><p class="info-value">${unissuedStores.length} nơi chưa phát</p></div><div class="store-section"><h3 class="store-section-title">Cửa hàng chưa phát</h3><div class="store-list">${unissuedHtml || '<div class="store-item">Không còn cửa hàng nào</div>'}</div></div></div>`;
       const img = document.getElementById("productImg");
@@ -1131,35 +1182,186 @@
       return normalizeSearchCompact(sizeValue) === normalizeSearchCompact(term);
     }
 
-    function strictOrFuzzyBrandMaterialMatch(item, term) {
-      // Tên hãng / chất liệu cho phép sai nhẹ, nhưng KHÔNG so với cột giá để tránh ra quá nhiều mẫu.
-      const brand = item.brand || "";
-      const material = item.material || "";
-      if (fuzzyMatchTerm(brand, term) || fuzzyMatchTerm(material, term)) return true;
-
-      // Vẫn cho tìm theo tên hàng / mã hàng, nhưng chỉ theo kiểu chứa chữ, không fuzzy rộng.
+    function hasExactInList(term, values) {
       const t = normalizeSearchCompact(term);
-      const name = normalizeSearchCompact(item.name || "");
-      const code = normalizeSearchCompact(item.code || "");
-      return (!!t && (name.includes(t) || code.includes(t)));
+      if (!t) return false;
+      return values.some(value => normalizeSearchCompact(value) === t);
+    }
+
+    function exactOrFuzzyInList(term, values) {
+      const t = normalizeSearchCompact(term);
+      if (!t) return false;
+      if (hasExactInList(term, values)) return true;
+      return values.some(value => fuzzyMatchTerm(value, term));
+    }
+
+    function matchKnownListField(value, term, values) {
+      const v = normalizeSearchCompact(value);
+      const t = normalizeSearchCompact(term);
+      if (!t) return true;
+      if (!v) return false;
+
+      // Nếu từ khóa trùng CHÍNH XÁC với một hãng/chất liệu trong sheet,
+      // bắt buộc dòng kết quả cũng phải trùng đúng cột đó.
+      // Ví dụ VICERA không được kéo ACERA theo.
+      if (hasExactInList(term, values)) return v === t;
+
+      // Chỉ khi người dùng gõ thiếu/sai nhẹ mới cho tìm gần đúng.
+      return termMatchesOnlyField(value, term, true);
+    }
+
+    function getUniqueGiaValues(key) {
+      const map = new Map();
+      giaData.forEach(item => {
+        const value = String(item[key] || "").trim();
+        if (!value) return;
+        const normalized = normalizeSearchCompact(value);
+        if (!map.has(normalized)) map.set(normalized, value);
+      });
+      return Array.from(map.values());
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function fillFilterSelect(id, placeholder, key) {
+      const select = document.getElementById(id);
+      if (!select) return;
+      const current = select.value;
+      const values = getUniqueGiaValues(key).sort((a, b) => String(a).localeCompare(String(b), "vi"));
+      select.innerHTML = `<option value="">${placeholder}</option>` + values.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
+      if (values.some(v => normalizeSearchCompact(v) === normalizeSearchCompact(current))) select.value = current;
+    }
+
+    function renderProductFilters() {
+      fillFilterSelect("filterSize", "Kích thước", "size");
+      fillFilterSelect("filterBrand", "Hãng", "brand");
+      fillFilterSelect("filterMaterial", "Chất liệu", "material");
+      fillFilterSelect("filterType", "Loại", "type");
+    }
+
+    function getFilterValue(id) {
+      const el = document.getElementById(id);
+      return el ? el.value : "";
+    }
+
+    function hasActiveProductFilters() {
+      return !!(getFilterValue("filterSize") || getFilterValue("filterBrand") || getFilterValue("filterMaterial") || getFilterValue("filterType"));
+    }
+
+    function applyProductFilters(items) {
+      const size = getFilterValue("filterSize");
+      const brand = getFilterValue("filterBrand");
+      const material = getFilterValue("filterMaterial");
+      const type = getFilterValue("filterType");
+      return items.filter(item => {
+        if (size && !strictSizeMatch(item.size, size)) return false;
+        if (brand && normalizeSearchCompact(item.brand) !== normalizeSearchCompact(brand)) return false;
+        if (material && normalizeSearchCompact(item.material) !== normalizeSearchCompact(material)) return false;
+        if (type && normalizeSearchCompact(item.type) !== normalizeSearchCompact(type)) return false;
+        return true;
+      });
+    }
+
+    function getActiveFilterTitle(raw) {
+      const parts = [];
+      const size = getFilterValue("filterSize");
+      const brand = getFilterValue("filterBrand");
+      const material = getFilterValue("filterMaterial");
+      const type = getFilterValue("filterType");
+      if (size) parts.push(size);
+      if (brand) parts.push(brand);
+      if (material) parts.push(material);
+      if (type) parts.push(type);
+      if (raw) parts.push(raw);
+      return parts.join(" ") || "Bộ lọc";
+    }
+
+    function termMatchesOnlyField(value, term, allowFuzzy) {
+      const v = normalizeSearchCompact(value);
+      const t = normalizeSearchCompact(term);
+      if (!t) return true;
+      if (!v) return false;
+      if (v === t || v.includes(t) || t.includes(v)) return true;
+      return allowFuzzy ? fuzzyMatchTerm(value, term) : false;
     }
 
     function itemMatchesAdvancedSearch(item, raw) {
       const terms = splitSearchTerms(raw);
       if (!terms.length) return false;
 
-      const sizeTerms = terms.filter(isSizeSearchTerm);
-      const otherTerms = terms.filter(t => !isSizeSearchTerm(t));
+      const brandValues = getUniqueGiaValues("brand");
+      const materialValues = getUniqueGiaValues("material");
+      const typeValues = getUniqueGiaValues("type");
 
-      // Nếu có kích thước trong câu tìm kiếm, bắt buộc kích thước phải khớp chính xác.
+      const sizeTerms = terms.filter(term => isSizeSearchTerm(term));
+      const otherTerms = terms.filter(term => !isSizeSearchTerm(term));
+
+      // Kích thước: chỉ so ở cột Kích thước.
       if (sizeTerms.length && !sizeTerms.every(t => strictSizeMatch(item.size, t))) return false;
 
-      // Các từ còn lại lọc theo Tên Hãng / Chất Liệu / Tên hàng / Mã hàng.
-      if (otherTerms.length) {
-        return otherTerms.every(term => strictOrFuzzyBrandMaterialMatch(item, term));
+      // Khi có nhập kích thước kèm từ khóa, ví dụ "40x80 ĐÁ", "40x80 MEN" hoặc "30x60 NICE":
+      // những từ còn lại CHỈ được so trong cột Tên Hãng hoặc Chất Liệu.
+      // Không so trong cột Tên hàng để tránh ra sai kết quả.
+      if (sizeTerms.length && otherTerms.length) {
+        return otherTerms.every(term =>
+          matchKnownListField(item.brand, term, brandValues) ||
+          matchKnownListField(item.material, term, materialValues) ||
+          matchKnownListField(item.type, term, typeValues)
+        );
       }
 
-      return sizeTerms.length > 0;
+      // Nếu chỉ nhập kích thước, đã qua điều kiện kích thước là đúng.
+      if (sizeTerms.length && !otherTerms.length) return true;
+
+      const brandTerms = [];
+      const materialTerms = [];
+      const typeTerms = [];
+      const nameOrCodeTerms = [];
+
+      otherTerms.forEach(term => {
+        // Tên Hãng chỉ lọc trong cột Tên Hãng.
+        if (exactOrFuzzyInList(term, brandValues)) {
+          brandTerms.push(term);
+          return;
+        }
+
+        // Chất Liệu chỉ lọc trong cột Chất Liệu.
+        if (exactOrFuzzyInList(term, materialValues)) {
+          materialTerms.push(term);
+          return;
+        }
+
+        // Loại chỉ lọc trong cột Loại.
+        if (exactOrFuzzyInList(term, typeValues)) {
+          typeTerms.push(term);
+          return;
+        }
+
+        // Chỉ khi không nhận ra là hãng/chất liệu/loại thì mới tìm trong Mã hàng hoặc Tên hàng.
+        nameOrCodeTerms.push(term);
+      });
+
+      if (brandTerms.length && !brandTerms.every(t => matchKnownListField(item.brand, t, brandValues))) return false;
+      if (materialTerms.length && !materialTerms.every(t => matchKnownListField(item.material, t, materialValues))) return false;
+      if (typeTerms.length && !typeTerms.every(t => matchKnownListField(item.type, t, typeValues))) return false;
+
+      if (nameOrCodeTerms.length) {
+        const name = normalizeSearchCompact(item.name || "");
+        const code = normalizeSearchCompact(item.code || "");
+        const ok = nameOrCodeTerms.every(term => {
+          const t = normalizeSearchCompact(term);
+          return !!t && (name.includes(t) || code.includes(t));
+        });
+        if (!ok) return false;
+      }
+
+      return brandTerms.length > 0 || materialTerms.length > 0 || nameOrCodeTerms.length > 0;
     }
 
     function handleSearch() {
@@ -1168,6 +1370,88 @@
       const normText = normalizeText(raw).replaceAll(" ", "");
       searched = true;
       inventoryResultCode = "";
+
+      const allSearchItems = getAllSearchItems();
+
+      if (hasActiveProductFilters()) {
+        let filteredMatches = applyProductFilters(allSearchItems);
+        if (raw) {
+          filteredMatches = filteredMatches.filter(item => {
+            const compactRaw = normalizeSearchCompact(raw);
+            const code = normalizeSearchCompact(item.code || "");
+            const name = normalizeSearchCompact(item.name || "");
+            return (compactRaw && (code.includes(compactRaw) || name.includes(compactRaw))) || itemMatchesAdvancedSearch(item, raw);
+          });
+        }
+        currentResult = null;
+        selectedStoreKey = "";
+        selectedStoreMatches = [];
+        selectedSize = "";
+        inventoryResultCode = "";
+        if (filteredMatches.length > 0) renderCodeMatches(filteredMatches, getActiveFilterTitle(raw));
+        else renderResult();
+        return;
+      }
+
+      // Tìm ghép nhiều điều kiện trước, ví dụ: "40x80 MEN", "40x80 ĐÁ", "30x60 NICE".
+      // Khi có kích thước + từ khóa, kích thước chỉ lọc cột Kích thước;
+      // MEN/ĐÁ chỉ lọc cột Chất Liệu; tên hãng chỉ lọc cột Tên Hãng.
+      const termsForCompound = splitSearchTerms(raw);
+      const sizeTermsForCompound = termsForCompound.filter(term => isSizeSearchTerm(term));
+      const otherTermsForCompound = termsForCompound.filter(term => !isSizeSearchTerm(term));
+      if (sizeTermsForCompound.length && otherTermsForCompound.length) {
+        const brandValues = getUniqueGiaValues("brand");
+        const materialValues = getUniqueGiaValues("material");
+        const typeValues = getUniqueGiaValues("type");
+        const isKnownBrandTerm = (term) => exactOrFuzzyInList(term, brandValues);
+        const isKnownMaterialTerm = (term) => exactOrFuzzyInList(term, materialValues);
+        const isKnownTypeTerm = (term) => exactOrFuzzyInList(term, typeValues);
+
+        const compoundMatches = allSearchItems.filter(item => {
+          const okSize = sizeTermsForCompound.every(t => strictSizeMatch(item.size, t));
+          if (!okSize) return false;
+
+          return otherTermsForCompound.every(term => {
+            const t = normalizeSearchCompact(term);
+
+            // Hai chất liệu cố định đang dùng: ĐÁ và MEN. Không tìm qua Tên hàng.
+            if (t === "da" || t === "men") {
+              return matchKnownListField(item.material, term, materialValues);
+            }
+
+            // Nếu từ khóa thuộc danh sách Chất Liệu thì chỉ lọc cột Chất Liệu.
+            if (isKnownMaterialTerm(term)) {
+              return matchKnownListField(item.material, term, materialValues);
+            }
+
+            // Nếu từ khóa thuộc danh sách Tên Hãng thì chỉ lọc cột Tên Hãng.
+            if (isKnownBrandTerm(term)) {
+              return matchKnownListField(item.brand, term, brandValues);
+            }
+
+            // Nếu từ khóa thuộc danh sách Loại thì chỉ lọc cột Loại.
+            if (isKnownTypeTerm(term)) {
+              return matchKnownListField(item.type, term, typeValues);
+            }
+
+            // Từ còn lại trong tìm kiếm ghép chỉ được so với Tên Hãng, Chất Liệu hoặc Loại,
+            // không so với Tên hàng để tránh ra sai mẫu.
+            return matchKnownListField(item.brand, term, brandValues) || matchKnownListField(item.material, term, materialValues) || matchKnownListField(item.type, term, typeValues);
+          });
+        });
+
+        currentResult = null;
+        selectedStoreKey = "";
+        selectedStoreMatches = [];
+        selectedSize = "";
+        inventoryResultCode = "";
+        if (compoundMatches.length > 0) {
+          renderCodeMatches(compoundMatches, raw);
+        } else {
+          renderResult();
+        }
+        return;
+      }
 
       // Tìm theo ngày
       const byDate = rawRows.filter((item) => normalizeText(item.date).replaceAll(" ", "") === normText);
@@ -1181,7 +1465,7 @@
       }
 
       // Tìm theo kích thước trong sheet GIÁ
-      const bySize = giaData.filter((item) => normalizeText(item.size).replaceAll(" ", "") === normText);
+      const bySize = giaData.filter((item) => strictSizeMatch(item.size, raw));
       if (bySize.length > 0) {
         currentResult = null;
         selectedStoreKey = "";
@@ -1190,8 +1474,6 @@
         renderResult();
         return;
       }
-
-      const allSearchItems = getAllSearchItems();
 
       // Tìm mã gần đúng trước. Ví dụ nhập 3806 sẽ ra 3806, T3806D, T3806M, T3806N.
       const matchedCodes = normText
@@ -1383,6 +1665,22 @@
 
     document.getElementById("calcBtn").addEventListener("click", calculateTiles);
 
+
+    ["filterSize", "filterBrand", "filterMaterial", "filterType"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener("change", handleSearch);
+    });
+    const clearFiltersBtn = document.getElementById("clearFiltersBtn");
+    if (clearFiltersBtn) {
+      clearFiltersBtn.addEventListener("click", () => {
+        ["filterSize", "filterBrand", "filterMaterial", "filterType"].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = "";
+        });
+        handleSearch();
+      });
+    }
+
     searchBtn.addEventListener("click", handleSearch);
     codeInput.addEventListener("keydown", (event) => { if (event.key === "Enter") handleSearch(); });
     tabMarketBtn.addEventListener("click", () => switchTab("market"));
@@ -1392,6 +1690,7 @@
     (async function init() {
       showLoading(true);
       await loadGia();
+      renderProductFilters();
       await loadTonKho();
       await loadSheet();
     })();
