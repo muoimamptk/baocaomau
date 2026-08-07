@@ -80,7 +80,7 @@
     .match-code { margin: 0; font-size: 16px; font-weight: 700; color: #0f172a; }
     .match-meta { margin-top: 4px; font-size: 13px; color: #64748b; line-height: 1.35; }
 
-    .tabs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
     .tab-btn { border-radius: 18px; padding: 12px 10px; font-weight: 700; background: white; color: #334155; border: 1px solid #cbd5e1; box-shadow: 0 6px 14px rgba(15,23,42,0.06); }
     .tab-btn.active { color: white; background: linear-gradient(to right, #2563eb, #4338ca); border: none; }
     .inventory-mini { margin-top: 14px; border-radius: 18px; background: #f8fafc; border: 1px solid #dbeafe; padding: 14px; }
@@ -119,7 +119,60 @@
     .calc-total { margin-top: 12px; border-radius: 18px; background: linear-gradient(to right, #2563eb, #4338ca); color: white; padding: 14px; }
     .calc-total p { margin: 0; }
     .calc-total-value { margin-top: 4px !important; font-size: 28px; font-weight: 700; }
-  </style>
+
+    .report-toolbar { display:grid; grid-template-columns:1fr 84px; gap:8px; margin-bottom:14px; }
+    .report-toolbar select { width:100%; border:1px solid #cbd5e1; border-radius:14px; padding:10px 12px; font-size:15px; background:white; outline:none; }
+    .report-view-btn { border-radius:14px; padding:10px 12px; font-weight:700; color:white; background:linear-gradient(to right,#2563eb,#4338ca); }
+    .report-kpis { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-bottom:14px; }
+    .report-kpi { background:white; border:1px solid #e2e8f0; border-radius:16px; padding:12px; }
+    .report-kpi-label { margin:0 0 5px; color:#64748b; font-size:12px; }
+    .report-kpi-value { margin:0; font-size:21px; font-weight:700; color:#0f172a; overflow-wrap:anywhere; }
+    .report-total { border-radius:18px; background:linear-gradient(to right,#2563eb,#4338ca); color:white; padding:14px; margin:14px 0; }
+    .report-total-label { margin:0; font-size:13px; color:#dbeafe; }
+    .report-total-value { margin:4px 0 0; font-size:28px; font-weight:700; }
+    .report-table-wrap { overflow:auto; border:1px solid #e2e8f0; border-radius:16px; background:white; max-height:560px; }
+    .report-table { width:100%; border-collapse:collapse; font-size:13px; min-width:680px; }
+    .report-table th,.report-table td { padding:9px 10px; border-bottom:1px solid #e2e8f0; text-align:left; white-space:nowrap; }
+    .report-table th { background:#f1f5f9; position:sticky; top:0; z-index:1; }
+    .report-rank { font-weight:800; color:#4338ca; }
+    .report-money { text-align:right !important; font-weight:700; }
+    @media (max-width:460px) { .tab-btn { padding:10px 5px; font-size:12px; } }
+  
+    /* Báo cáo khách sỉ: bảng gọn để nhìn thấy ngay 4 cột chính */
+    #reportBox .tonkho-table { min-width: 0 !important; width: 100%; table-layout: fixed; font-size: 12px; }
+    #reportBox .tonkho-table th, #reportBox .tonkho-table td { padding: 7px 5px !important; white-space: normal; line-height: 1.25; vertical-align: middle; }
+    #reportBox .tonkho-table th:nth-child(1), #reportBox .tonkho-table td:nth-child(1) { width: 9%; text-align: center; }
+    #reportBox .tonkho-table th:nth-child(2), #reportBox .tonkho-table td:nth-child(2) { width: 43%; }
+    #reportBox .tonkho-table th:nth-child(3), #reportBox .tonkho-table td:nth-child(3) { width: 17%; text-align: center; }
+    #reportBox .tonkho-table th:nth-child(4), #reportBox .tonkho-table td:nth-child(4) { width: 31%; text-align: right; font-weight: 700; }
+    #reportBox .tonkho-table-wrap { overflow-x: hidden; }
+
+  
+    /* Báo cáo: ép 4 cột nằm trọn màn hình, không kéo ngang */
+    #reportBox .report-table-wrap,
+    #reportBox .tonkho-table-wrap {
+      width:100% !important; max-width:100% !important;
+      overflow-x:hidden !important;
+    }
+    #reportBox table {
+      width:100% !important;
+      min-width:0 !important;
+      table-layout:fixed !important;
+      border-collapse:collapse !important;
+      font-size:11px !important;
+    }
+    #reportBox table th, #reportBox table td {
+      padding:6px 3px !important;
+      overflow:hidden !important;
+      text-overflow:ellipsis !important;
+      white-space:nowrap !important;
+    }
+    #reportBox table th:nth-child(1), #reportBox table td:nth-child(1) { width:8% !important; text-align:center; }
+    #reportBox table th:nth-child(2), #reportBox table td:nth-child(2) { width:44% !important; }
+    #reportBox table th:nth-child(3), #reportBox table td:nth-child(3) { width:17% !important; text-align:center; }
+    #reportBox table th:nth-child(4), #reportBox table td:nth-child(4) { width:31% !important; text-align:right; font-weight:700; }
+
+</style>
 </head>
 <body>
   <div class="wrap">
@@ -135,6 +188,7 @@
       <button class="tab-btn active" id="tabMarketBtn" type="button">🔎 Tra cứu</button>
       <button class="tab-btn" id="tabStockBtn" type="button">📦 Tồn kho</button>
       <button class="tab-btn" id="tabCalcBtn" type="button">🧮 Tính</button>
+      <button class="tab-btn" id="tabReportBtn" type="button">📊 Báo cáo</button>
     </div>
 
     <div class="card" id="searchCard">
@@ -250,6 +304,7 @@
         <div class="inventory-note">Nhập kích thước, viên/thùng, số lượng và giá để tính.</div>
       </div>
     </div>
+    <div class="result" id="reportBox" style="display:none;"></div>
     <div class="footer-box" id="footerBox">Dữ liệu lấy từ Tiền Minh Chiến</div>
   </div>
 
@@ -268,6 +323,8 @@
     let selectedStoreKey = "";
     let selectedStoreMatches = [];
     let inventoryResultCode = "";
+    let wholesaleCustomers = [];
+    let businessRows = [];
 
     const areaOrder = { "đức hoà": 1, "đức hòa": 1, "đức huệ": 2, "củ chi": 3, "tây ninh": 4 };
     const codeInput = document.getElementById("codeInput");
@@ -278,10 +335,12 @@
     const tabMarketBtn = document.getElementById("tabMarketBtn");
     const tabStockBtn = document.getElementById("tabStockBtn");
     const tabCalcBtn = document.getElementById("tabCalcBtn");
+    const tabReportBtn = document.getElementById("tabReportBtn");
     const searchCard = document.getElementById("searchCard");
     const tonKhoBox = document.getElementById("tonKhoBox");
     const calcBox = document.getElementById("calcBox");
     const footerBox = document.getElementById("footerBox");
+    const reportBox = document.getElementById("reportBox");
 
     async function downloadImageFast(url, filename) {
       try {
@@ -346,6 +405,11 @@
     function getGiaJsonUrl(sheetUrl) {
       const id = getGoogleSheetId(sheetUrl);
       return id ? `https://opensheet.elk.sh/${id}/${encodeURIComponent("GIÁ")}` : "";
+    }
+
+    function getSheetJsonUrl(sheetUrl, sheetName) {
+      const id = getGoogleSheetId(sheetUrl);
+      return id ? `https://opensheet.elk.sh/${id}/${encodeURIComponent(sheetName)}` : "";
     }
 
     function getValueAnyKey(row, names) {
@@ -585,18 +649,151 @@
       // Không lọc realtime khi đang gõ để tránh lỗi bàn phím trên điện thoại.
     }
 
+    function parseBusinessMoney(value) {
+      let text = String(value ?? "").trim();
+      if (!text) return 0;
+      text = text.replace(/\s/g, "");
+      // Dữ liệu công ty thường dạng 2,637,500.0 hoặc 104,000.0
+      if (text.includes(",") && text.includes(".")) text = text.replace(/,/g, "");
+      else if ((text.match(/,/g) || []).length > 1) text = text.replace(/,/g, "");
+      else if (text.includes(",") && !text.includes(".")) {
+        const parts = text.split(",");
+        text = parts[1] && parts[1].length === 3 ? parts.join("") : parts.join(".");
+      }
+      const n = Number(text);
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    function parseBusinessDate(value) {
+      const text = String(value || "").trim();
+      const m = text.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+      if (!m) return null;
+      let year = Number(m[3]);
+      if (year < 100) year += 2000;
+      const month = Number(m[2]);
+      const day = Number(m[1]);
+      if (!year || month < 1 || month > 12 || day < 1 || day > 31) return null;
+      return { day, month, year, key: `${year}-${String(month).padStart(2,"0")}` };
+    }
+
+    async function loadWholesaleReportData() {
+      try {
+        const customerUrl = getSheetJsonUrl(GOOGLE_SHEET_URL, "Mã Khách Hàng");
+        const businessUrl = getSheetJsonUrl(GOOGLE_SHEET_URL, "Kinh Doanh");
+        const [customerRes, businessRes] = await Promise.all([
+          fetch(customerUrl, { cache: "no-store" }),
+          fetch(businessUrl, { cache: "no-store" })
+        ]);
+        if (!customerRes.ok || !businessRes.ok) throw new Error("Không đọc được sheet báo cáo");
+        const [customerJson, businessJson] = await Promise.all([customerRes.json(), businessRes.json()]);
+
+        wholesaleCustomers = customerJson.map(row => ({
+          makh: String(getValueAnyKey(row, ["makh", "Mã KH", "Ma KH", "Mã khách hàng", "Ma khach hang"]) || "").trim().toUpperCase(),
+          store: String(getValueAnyKey(row, ["Tên Cửa Hàng", "Tên cửa hàng", "Ten Cua Hang", "tenkh"]) || "").trim(),
+          area: String(getValueAnyKey(row, ["Khu Vực", "Khu vực", "Khu Vuc", "Khu vuc", "area"]) || "").trim()
+        })).filter(x => x.makh);
+
+        const customerMap = new Map(wholesaleCustomers.map(x => [x.makh, x]));
+        businessRows = businessJson.map(row => {
+          const makh = String(getValueAnyKey(row, ["makh", "Mã KH", "Ma KH"]) || "").trim().toUpperCase();
+          const dateText = getValueAnyKey(row, ["ngayct", "Ngày CT", "Ngay CT", "Ngày", "Ngay"]);
+          const date = parseBusinessDate(dateText);
+          return {
+            makh,
+            tenkh: String(getValueAnyKey(row, ["tenkh", "Tên KH", "Ten KH", "Tên khách hàng"]) || "").trim(),
+            amount: parseBusinessMoney(getValueAnyKey(row, ["TTienVND", "TTien VND", "Tổng tiền", "Tong tien"])),
+            dateText,
+            date,
+            customer: customerMap.get(makh) || null
+          };
+        }).filter(r => r.customer && r.date);
+      } catch (e) {
+        wholesaleCustomers = [];
+        businessRows = [];
+        console.error("Lỗi tải báo cáo khách sỉ:", e);
+      }
+    }
+
+    function getReportMonths() {
+      return Array.from(new Set(businessRows.map(r => r.date && r.date.key).filter(Boolean))).sort().reverse();
+    }
+
+    function monthLabel(key) {
+      if (!key) return "";
+      const [year, month] = key.split("-");
+      return `Tháng ${Number(month)}/${year}`;
+    }
+
+    function aggregateWholesale(rows) {
+      const map = new Map();
+      rows.forEach(r => {
+        const c = r.customer;
+        if (!c) return;
+        if (!map.has(c.makh)) map.set(c.makh, { makh:c.makh, store:c.store || r.tenkh || c.makh, area:c.area || "", amount:0, orders:0 });
+        const item = map.get(c.makh);
+        item.amount += Number(r.amount || 0);
+        item.orders += 1;
+      });
+      return Array.from(map.values()).sort((a,b) => b.amount - a.amount || a.store.localeCompare(b.store,"vi"));
+    }
+
+    function renderWholesaleReport(selectedMonth) {
+      const months = getReportMonths();
+      const month = selectedMonth || months[0] || "";
+      if (!businessRows.length) {
+        reportBox.innerHTML = `<div class="result-body"><h2 class="code" style="font-size:26px;">Báo cáo khách sỉ</h2><div class="inventory-note" style="margin-top:10px;">Chưa tải được dữ liệu từ sheet “Kinh Doanh” hoặc “Mã Khách Hàng”. Hãy kiểm tra quyền chia sẻ Google Sheet và tên tab.</div></div>`;
+        return;
+      }
+
+      const monthRows = businessRows.filter(r => r.date && r.date.key === month);
+      const monthAgg = aggregateWholesale(monthRows);
+      const totalAgg = aggregateWholesale(businessRows);
+      const monthRevenue = monthRows.reduce((s,r) => s + Number(r.amount || 0), 0);
+      const totalRevenue = businessRows.reduce((s,r) => s + Number(r.amount || 0), 0);
+      const monthOptions = months.map(m => `<option value="${m}" ${m===month ? "selected" : ""}>${monthLabel(m)}</option>`).join("");
+
+      const monthTable = monthAgg.map((r,i) => `<tr><td class="report-rank">${i+1}</td><td>${r.store}</td><td>${r.area || "—"}</td><td class="report-money">${formatMoney(r.amount)}</td></tr>`).join("");
+      const totalTable = totalAgg.map((r,i) => `<tr><td class="report-rank">${i+1}</td><td>${r.store}</td><td>${r.area || "—"}</td><td class="report-money">${formatMoney(r.amount)}</td></tr>`).join("");
+
+      reportBox.innerHTML = `
+        <div class="result-body">
+          <div class="top-row"><div><p class="muted">Dashboard</p><h2 class="code" style="font-size:28px;">Báo cáo khách sỉ</h2></div><span class="stock">${wholesaleCustomers.length} KH</span></div>
+          <div class="report-toolbar"><select id="reportMonthSelect">${monthOptions}</select><button type="button" class="report-view-btn" id="reportViewBtn">Xem</button></div>
+          <div class="report-kpis">
+            <div class="report-kpi"><p class="report-kpi-label">Doanh số ${monthLabel(month)}</p><p class="report-kpi-value">${formatMoney(monthRevenue)}</p></div>
+            <div class="report-kpi"><p class="report-kpi-label">Cửa hàng có mua</p><p class="report-kpi-value">${monthAgg.length}</p></div>
+            <div class="report-kpi"><p class="report-kpi-label">Số giao dịch</p><p class="report-kpi-value">${monthRows.length}</p></div>
+            <div class="report-kpi"><p class="report-kpi-label">Khách sỉ trong danh sách</p><p class="report-kpi-value">${wholesaleCustomers.length}</p></div>
+          </div>
+          <h3 class="related-title">Xếp hạng ${monthLabel(month)}</h3>
+          <div class="report-table-wrap"><table class="report-table"><thead><tr><th>STT</th><th>Tên cửa hàng</th><th>Khu vực</th><th>Tổng doanh số</th></tr></thead><tbody>${monthTable || '<tr><td colspan="5">Tháng này chưa có doanh số khách sỉ.</td></tr>'}</tbody></table></div>
+          
+          <h3 class="related-title">Xếp hạng tổng tất cả các tháng</h3>
+          <div class="report-table-wrap"><table class="report-table"><thead><tr><th>STT</th><th>Tên cửa hàng</th><th>Khu vực</th><th>Tổng doanh số</th></tr></thead><tbody>${totalTable}</tbody></table></div>
+        </div>`;
+
+      const viewBtn = document.getElementById("reportViewBtn");
+      const monthSelect = document.getElementById("reportMonthSelect");
+      if (viewBtn && monthSelect) viewBtn.onclick = () => renderWholesaleReport(monthSelect.value);
+    }
+
     function switchTab(tab) {
       const isStock = tab === "stock";
       const isCalc = tab === "calc";
-      tabMarketBtn.classList.toggle("active", !isStock && !isCalc);
+      const isReport = tab === "report";
+      const isMarket = !isStock && !isCalc && !isReport;
+      tabMarketBtn.classList.toggle("active", isMarket);
       tabStockBtn.classList.toggle("active", isStock);
       tabCalcBtn.classList.toggle("active", isCalc);
-      searchCard.style.display = (!isStock && !isCalc) ? "block" : "none";
-      resultBox.style.display = (!isStock && !isCalc) ? "block" : "none";
+      tabReportBtn.classList.toggle("active", isReport);
+      searchCard.style.display = isMarket ? "block" : "none";
+      resultBox.style.display = isMarket ? "block" : "none";
       tonKhoBox.style.display = isStock ? "block" : "none";
       calcBox.style.display = isCalc ? "block" : "none";
-      footerBox.textContent = isStock ? "Dữ liệu tồn kho lấy từ sheet TỒN KHO" : (isCalc ? "Công cụ tính m², thùng, viên và tiền" : "Dữ liệu lấy từ Tiền Minh Chiến");
+      reportBox.style.display = isReport ? "block" : "none";
+      footerBox.textContent = isStock ? "Dữ liệu tồn kho lấy từ sheet TỒN KHO" : (isCalc ? "Công cụ tính m², thùng, viên và tiền" : (isReport ? "Báo cáo HẾT!" : "Dữ liệu lấy từ Tiền Minh Chiến"));
       if (isStock) renderTonKhoDashboard();
+      if (isReport) renderWholesaleReport();
     }
 
     function showLoading(show) { loadingAlert.style.display = show ? "block" : "none"; }
@@ -1686,14 +1883,19 @@
     tabMarketBtn.addEventListener("click", () => switchTab("market"));
     tabStockBtn.addEventListener("click", () => switchTab("stock"));
     tabCalcBtn.addEventListener("click", () => switchTab("calc"));
+    tabReportBtn.addEventListener("click", () => switchTab("report"));
 
     (async function init() {
       showLoading(true);
       await loadGia();
       renderProductFilters();
       await loadTonKho();
+      await loadWholesaleReportData();
       await loadSheet();
     })();
   </script>
+
+
+
 </body>
 </html>
