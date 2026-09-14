@@ -344,8 +344,23 @@
       updateSelectedBar();
     }
     async function downloadSelectedImages(){
-      for(const item of selectedImages.values()) await downloadImageFast(item.url,item.file);
+      if(selectedImages.size===0){ alert("Chưa chọn ảnh nào"); return; }
+      const items=[...selectedImages.values()];
+      for(const item of items){
+        downloadImageFast(item.url,item.file);
+        await new Promise(r=>setTimeout(r,500));
+      }
     }
+    function clearSelectedImages(){
+      selectedImages.clear();
+      document.querySelectorAll(".select-product").forEach(cb=>cb.checked=false);
+      updateSelectedBar();
+    }
+
+    document.addEventListener("click", (e)=>{
+      if(e.target && e.target.id==="clearSelectedBtn") clearSelectedImages();
+      if(e.target && e.target.id==="downloadSelectedBtn") downloadSelectedImages();
+    });
 
     const areaOrder = { "đức hoà": 1, "đức hòa": 1, "đức huệ": 2, "củ chi": 3, "tây ninh": 4 };
     const codeInput = document.getElementById("codeInput");
@@ -1153,7 +1168,7 @@
         const typeText = item.type || (gia && gia.type ? gia.type : "");
         const extraText = `${brandText ? "Hãng: " + brandText + "<br>" : ""}${materialText ? "Chất liệu: " + materialText + "<br>" : ""}${typeText ? "Loại: " + typeText + "<br>" : ""}`;
         const meta = `${productName ? productName + "<br>" : ""}${extraText}${item.price ? item.price + "<br>" : ""}${item.size || "Chưa có kích thước"}<br>${stockText}`;
-        return `<div role="button" tabindex="0" class="match-btn" data-code="${item.code}"><img src="${image}" alt="${item.code}"><div class="match-body"><div class="card-code-row"><p class="match-code">${item.code}</p><input class="select-product" type="checkbox" data-code="${item.code}" data-url="${image}" data-file="${item.code}.jpg" onclick="event.stopPropagation(); toggleSelectImage(this)" title="Chọn ảnh"><button type="button" class="card-download-btn" onclick="event.stopPropagation(); downloadImageFast('${image}', '${item.code}.jpg')" title="Tải ảnh">📥</button></div><div class="match-meta">${meta}</div></div></div>`;
+        return `<div role="button" tabindex="0" class="match-btn" data-code="${item.code}"><img src="${image}" alt="${item.code}"><div class="match-body"><div class="card-code-row"><p class="match-code">${item.code}</p><button type="button" class="card-download-btn" onclick="event.stopPropagation(); downloadImageFast('${image}', '${item.code}.jpg')" title="Tải ảnh">📥</button></div><div class="match-meta">${meta}</div><label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:14px;font-weight:700;"><input class="select-product" type="checkbox" data-code="${item.code}" data-url="${image}" data-file="${item.code}.jpg" onclick="event.stopPropagation(); toggleSelectImage(this)"> Chọn tải ảnh</label></div></div>`;
       }).join("");
 
       resultBox.innerHTML = `
