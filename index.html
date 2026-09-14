@@ -310,7 +310,7 @@
     <div class="result" id="reportBox" style="display:none;"></div>
     <div class="footer-box" id="footerBox">Dữ liệu lấy từ Tiền Minh Chiến</div>
   </div>
-  <div id="batchDownloadBar" class="batch-download-bar"><span id="selectedCount">Đã chọn: 0 ảnh</span><button type="button" id="clearSelectedBtn">Xóa chọn</button><button type="button" id="downloadSelectedBtn">📥 Tải ảnh</button></div>
+  <div id="batchDownloadBar" class="batch-download-bar"><span id="selectedCount">Đã chọn: 0 ảnh</span><button type="button" id="clearSelectedBtn">Xóa chọn</button><button type="button" id="downloadSelectedBtn">📤 Chia sẻ ảnh</button></div>
 
   <script>
     const GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1s6r-yM4PcE3aczLZwk0r3SVaeJlWWyEsdjYvtup-hWw/edit?usp=sharing";
@@ -392,7 +392,35 @@
       a.remove();
     }
 
-    function normalizeText(text) { return String(text || "").trim().toLowerCase(); }
+    
+async function shareSelectedImages() {
+  const checked = Array.from(document.querySelectorAll('input[type="checkbox"]:checked'));
+  const urls = checked.map(x => x.dataset.image).filter(Boolean);
+
+  if (!urls.length) {
+    alert("Chưa chọn ảnh nào");
+    return;
+  }
+
+  try {
+    const files = [];
+    for (let i = 0; i < urls.length; i++) {
+      const response = await fetch(urls[i], {mode:"cors"});
+      const blob = await response.blob();
+      files.push(new File([blob], `anh-${i+1}.jpg`, {type: blob.type || "image/jpeg"}));
+    }
+
+    if (navigator.share && navigator.canShare && navigator.canShare({files})) {
+      await navigator.share({files, title:"Ảnh gạch"});
+    } else {
+      alert("Thiết bị/trình duyệt này chưa hỗ trợ chia sẻ nhiều ảnh.");
+    }
+  } catch(e) {
+    alert("Không thể chia sẻ ảnh: " + e.message);
+  }
+}
+
+function normalizeText(text) { return String(text || "").trim().toLowerCase(); }
     function toDisplayText(text) {
       const value = String(text || "").trim().toLowerCase();
       if (!value) return "";
