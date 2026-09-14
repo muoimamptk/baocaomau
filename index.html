@@ -32,6 +32,9 @@
     .img-box img { width: 100%; height: 100%; object-fit: contain; background: white; }
     .download-image-btn { position: absolute; top: 8px; right: 8px; background: rgba(37,99,235,0.92); color: white; border: none; padding: 5px 8px; border-radius: 10px; font-size: 12px; font-weight: 700; line-height: 1; box-shadow: 0 4px 10px rgba(15,23,42,0.18); z-index: 2; cursor: pointer; }
     .card-code-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .batch-download-bar { position:fixed; left:50%; bottom:14px; transform:translateX(-50%); z-index:50; display:none; gap:8px; align-items:center; background:white; border:1px solid #e2e8f0; padding:10px 12px; border-radius:18px; box-shadow:0 10px 25px rgba(0,0,0,.15); }
+    .batch-download-bar button { border-radius:14px; padding:10px 14px; font-weight:700; background:#2563eb; color:white; }
+    .select-product { width:18px; height:18px; accent-color:#2563eb; }
     .card-download-btn { flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:9px; background:#2563eb; color:white; border:none; font-size:14px; line-height:1; box-shadow:0 3px 8px rgba(37,99,235,0.22); cursor:pointer; padding:0; }
 
     .product-filters { margin-top: 12px; border-top: 1px dashed #e2e8f0; padding-top: 12px; }
@@ -77,8 +80,6 @@
     .match-btn { border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; background: white; text-align: left; padding: 0; width: 100%; }
     .match-btn img { width: 100%; height: 110px; object-fit: contain; background: white; border-bottom: 1px solid #e2e8f0; display: block; }
     .match-body { padding: 10px; }
-    .quote-check { margin-top:8px; display:flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:#2563eb; }
-    .quote-float { position:fixed; left:16px; right:16px; bottom:18px; z-index:99; display:none; border-radius:18px; padding:14px; background:linear-gradient(to right,#2563eb,#4338ca); color:white; font-weight:800; text-align:center; box-shadow:0 10px 25px rgba(0,0,0,.25); }
     .match-code { margin: 0; font-size: 16px; font-weight: 700; color: #0f172a; }
     .match-meta { margin-top: 4px; font-size: 13px; color: #64748b; line-height: 1.35; }
 
@@ -307,9 +308,9 @@
       </div>
     </div>
     <div class="result" id="reportBox" style="display:none;"></div>
-    <div class="quote-float" id="quoteFloat" onclick="createQuoteImage()">📤 Tạo báo giá Zalo</div><button onclick="clearQuoteSelect()" style="position:fixed;right:16px;bottom:80px;z-index:100;border:0;border-radius:16px;padding:10px 14px;background:#ef4444;color:#fff;font-weight:700;display:none" id="clearQuoteBtn">🗑 Xóa chọn</button>
     <div class="footer-box" id="footerBox">Dữ liệu lấy từ Tiền Minh Chiến</div>
   </div>
+  <div id="batchDownloadBar" class="batch-download-bar"><span id="selectedCount">Đã chọn: 0 ảnh</span><button type="button" id="clearSelectedBtn">Xóa chọn</button><button type="button" id="downloadSelectedBtn">📥 Tải ảnh</button></div>
 
   <script>
     const GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1s6r-yM4PcE3aczLZwk0r3SVaeJlWWyEsdjYvtup-hWw/edit?usp=sharing";
@@ -328,7 +329,23 @@
     let inventoryResultCode = "";
     let wholesaleCustomers = [];
     let businessRows = [];
-    let quoteSelected = [];
+    let selectedImages = new Map();
+
+    function updateSelectedBar(){
+      const bar=document.getElementById("batchDownloadBar");
+      const count=document.getElementById("selectedCount");
+      if(!bar) return;
+      count.textContent=`Đã chọn: ${selectedImages.size} ảnh`;
+      bar.style.display=selectedImages.size?"flex":"none";
+    }
+    function toggleSelectImage(cb){
+      if(cb.checked) selectedImages.set(cb.dataset.code, {url:cb.dataset.url, file:cb.dataset.file});
+      else selectedImages.delete(cb.dataset.code);
+      updateSelectedBar();
+    }
+    async function downloadSelectedImages(){
+      for(const item of selectedImages.values()) await downloadImageFast(item.url,item.file);
+    }
 
     const areaOrder = { "đức hoà": 1, "đức hòa": 1, "đức huệ": 2, "củ chi": 3, "tây ninh": 4 };
     const codeInput = document.getElementById("codeInput");
@@ -1070,48 +1087,6 @@
       return getAllSearchItems().find(item => item.code === normalized) || null;
     }
 
-    function toggleQuoteSelect(code){
-      const item=getSearchItemByCode(code);
-      if(!item) return;
-      const idx=quoteSelected.findIndex(x=>x.code===code);
-      if(idx>=0) quoteSelected.splice(idx,1); else { if(quoteSelected.length>=9){alert("Chỉ chọn tối đa 9 mã"); return;} quoteSelected.push(item); }
-      document.querySelectorAll('.quote-check input').forEach(c=>{c.checked=quoteSelected.some(x=>x.code===c.dataset.code);});
-      const btn=document.getElementById('quoteFloat');
-      if(btn){btn.style.display=quoteSelected.length?'block':'none'; btn.textContent=`📤 Tạo báo giá Zalo (${quoteSelected.length})`;}
-    }
-    function clearQuoteSelect(){
-      quoteSelected=[];
-      document.querySelectorAll('.quote-check input').forEach(c=>c.checked=false);
-      const btn=document.getElementById('quoteFloat');
-      if(btn){btn.style.display='none';btn.textContent='📤 Tạo báo giá Zalo';}
-    }
-    function createQuoteImage(){
-      if(!quoteSelected.length) return;
-      const canvas=document.createElement('canvas'); canvas.width=1500; canvas.height=1500;
-      const ctx=canvas.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,1500,1500);
-      ctx.fillStyle='#2563eb'; ctx.font='bold 52px Arial'; ctx.fillText('BÁO GIÁ GẠCH MINH CHIẾN',80,80);
-      const cards=quoteSelected.slice(0,9);
-      cards.forEach((it,i)=>{
-        const col=i%3, row=Math.floor(i/3);
-        const x=60+col*480, y=130+row*430;
-        ctx.strokeStyle='#dbeafe'; ctx.strokeRect(x,y,420,370);
-        const img=new Image(); img.crossOrigin='anonymous';
-        img.onload=()=>{ctx.drawImage(img,x+20,y+20,160,160); drawText();};
-        img.onerror=()=>drawText();
-        img.src=it.image||FALLBACK_IMAGE;
-        function drawText(){
-          ctx.fillStyle='#0f172a'; ctx.font='bold 28px Arial'; ctx.fillText(it.code||'',x+200,y+60);
-          ctx.font='22px Arial'; ctx.fillText('KT: '+(it.size||''),x+200,y+100);
-          ctx.fillStyle='#dc2626'; ctx.font='bold 30px Arial'; ctx.fillText('Giá: '+(it.price||'')+'/thùng',x+20,y+225);
-          ctx.fillStyle='#334155'; ctx.font='22px Arial';
-          const inv=findInventoryByCode(it.code);
-          ctx.fillText('📦 '+(inv?.vien||'')+' viên/thùng',x+20,y+270);
-          ctx.fillText('📏 m²/thùng',x+20,y+310);
-        }
-      });
-      setTimeout(()=>{canvas.toBlob(async b=>{const f=new File([b],'bao-gia-zalo.png',{type:'image/png'}); if(navigator.share&&navigator.canShare&&navigator.canShare({files:[f]})) await navigator.share({files:[f],title:'Báo giá gạch'}); else {const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='bao-gia-zalo.png';a.click();}},'image/png')},1200);
-    }
-
     function renderCodeMatches(matches, keyword) {
       const sortedMatches = [...matches].sort((a, b) => {
         const invA = findInventoryByCode(a.code);
@@ -1178,7 +1153,7 @@
         const typeText = item.type || (gia && gia.type ? gia.type : "");
         const extraText = `${brandText ? "Hãng: " + brandText + "<br>" : ""}${materialText ? "Chất liệu: " + materialText + "<br>" : ""}${typeText ? "Loại: " + typeText + "<br>" : ""}`;
         const meta = `${productName ? productName + "<br>" : ""}${extraText}${item.price ? item.price + "<br>" : ""}${item.size || "Chưa có kích thước"}<br>${stockText}`;
-        return `<div role="button" tabindex="0" class="match-btn" data-code="${item.code}"><img src="${image}" alt="${item.code}"><div class="match-body"><div class="card-code-row"><p class="match-code">${item.code}</p><button type="button" class="card-download-btn" onclick="event.stopPropagation(); downloadImageFast('${image}', '${item.code}.jpg')" title="Tải ảnh">📥</button></div><div class="match-meta">${meta}</div><label class="quote-check" onclick="event.stopPropagation()"><input type="checkbox" data-code="${item.code}" onchange="toggleQuoteSelect('${item.code}')"> Chọn báo giá</label></div></div>`;
+        return `<div role="button" tabindex="0" class="match-btn" data-code="${item.code}"><img src="${image}" alt="${item.code}"><div class="match-body"><div class="card-code-row"><p class="match-code">${item.code}</p><input class="select-product" type="checkbox" data-code="${item.code}" data-url="${image}" data-file="${item.code}.jpg" onclick="event.stopPropagation(); toggleSelectImage(this)" title="Chọn ảnh"><button type="button" class="card-download-btn" onclick="event.stopPropagation(); downloadImageFast('${image}', '${item.code}.jpg')" title="Tải ảnh">📥</button></div><div class="match-meta">${meta}</div></div></div>`;
       }).join("");
 
       resultBox.innerHTML = `
