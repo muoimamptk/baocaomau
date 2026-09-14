@@ -307,7 +307,7 @@
       </div>
     </div>
     <div class="result" id="reportBox" style="display:none;"></div>
-    <div class="quote-float" id="quoteFloat" onclick="createQuoteImage()">📤 Tạo báo giá Zalo</div>
+    <div class="quote-float" id="quoteFloat" onclick="createQuoteImage()">📤 Tạo báo giá Zalo</div><button onclick="clearQuoteSelect()" style="position:fixed;right:16px;bottom:80px;z-index:100;border:0;border-radius:16px;padding:10px 14px;background:#ef4444;color:#fff;font-weight:700;display:none" id="clearQuoteBtn">🗑 Xóa chọn</button>
     <div class="footer-box" id="footerBox">Dữ liệu lấy từ Tiền Minh Chiến</div>
   </div>
 
@@ -1074,24 +1074,42 @@
       const item=getSearchItemByCode(code);
       if(!item) return;
       const idx=quoteSelected.findIndex(x=>x.code===code);
-      if(idx>=0) quoteSelected.splice(idx,1); else { if(quoteSelected.length>=4){alert("Chỉ chọn tối đa 4 mã"); return;} quoteSelected.push(item); }
+      if(idx>=0) quoteSelected.splice(idx,1); else { if(quoteSelected.length>=9){alert("Chỉ chọn tối đa 9 mã"); return;} quoteSelected.push(item); }
       document.querySelectorAll('.quote-check input').forEach(c=>{c.checked=quoteSelected.some(x=>x.code===c.dataset.code);});
       const btn=document.getElementById('quoteFloat');
       if(btn){btn.style.display=quoteSelected.length?'block':'none'; btn.textContent=`📤 Tạo báo giá Zalo (${quoteSelected.length})`;}
     }
+    function clearQuoteSelect(){
+      quoteSelected=[];
+      document.querySelectorAll('.quote-check input').forEach(c=>c.checked=false);
+      const btn=document.getElementById('quoteFloat');
+      if(btn){btn.style.display='none';btn.textContent='📤 Tạo báo giá Zalo';}
+    }
     function createQuoteImage(){
       if(!quoteSelected.length) return;
-      const canvas=document.createElement('canvas'); canvas.width=1200; canvas.height=900;
-      const ctx=canvas.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,1200,900);
-      ctx.fillStyle='#2563eb'; ctx.font='bold 48px Arial'; ctx.fillText('BÁO GIÁ GẠCH MINH CHIẾN',60,70);
-      let loaded=0; const cards=quoteSelected.slice(0,4);
+      const canvas=document.createElement('canvas'); canvas.width=1500; canvas.height=1500;
+      const ctx=canvas.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,1500,1500);
+      ctx.fillStyle='#2563eb'; ctx.font='bold 52px Arial'; ctx.fillText('BÁO GIÁ GẠCH MINH CHIẾN',80,80);
+      const cards=quoteSelected.slice(0,9);
       cards.forEach((it,i)=>{
-        const x=60+(i%2)*560, y=120+Math.floor(i/2)*370;
-        ctx.strokeStyle='#dbeafe'; ctx.strokeRect(x,y,500,320);
-        const img=new Image(); img.crossOrigin='anonymous'; img.onload=()=>{ctx.drawImage(img,x+20,y+20,220,180); draw();}; img.onerror=()=>draw(); img.src=it.image||FALLBACK_IMAGE;
-        function draw(){ loaded++; ctx.fillStyle='#0f172a'; ctx.font='bold 30px Arial'; ctx.fillText(it.code,x+260,y+60); ctx.font='24px Arial'; ctx.fillText('KT: '+(it.size||''),x+260,y+100); ctx.fillStyle='#dc2626'; ctx.font='bold 34px Arial'; ctx.fillText((it.price||'')+'/thùng',x+260,y+145); ctx.fillStyle='#334155'; ctx.font='22px Arial'; const inv=findInventoryByCode(it.code); ctx.fillText(inv?`${inv.vien||''} viên | ${inv.thung||''} thùng`: '',x+260,y+185); }
+        const col=i%3, row=Math.floor(i/3);
+        const x=60+col*480, y=130+row*430;
+        ctx.strokeStyle='#dbeafe'; ctx.strokeRect(x,y,420,370);
+        const img=new Image(); img.crossOrigin='anonymous';
+        img.onload=()=>{ctx.drawImage(img,x+20,y+20,160,160); drawText();};
+        img.onerror=()=>drawText();
+        img.src=it.image||FALLBACK_IMAGE;
+        function drawText(){
+          ctx.fillStyle='#0f172a'; ctx.font='bold 28px Arial'; ctx.fillText(it.code||'',x+200,y+60);
+          ctx.font='22px Arial'; ctx.fillText('KT: '+(it.size||''),x+200,y+100);
+          ctx.fillStyle='#dc2626'; ctx.font='bold 30px Arial'; ctx.fillText('Giá: '+(it.price||'')+'/thùng',x+20,y+225);
+          ctx.fillStyle='#334155'; ctx.font='22px Arial';
+          const inv=findInventoryByCode(it.code);
+          ctx.fillText('📦 '+(inv?.vien||'')+' viên/thùng',x+20,y+270);
+          ctx.fillText('📏 m²/thùng',x+20,y+310);
+        }
       });
-      setTimeout(()=>{canvas.toBlob(async b=>{const f=new File([b],'bao-gia-zalo.png',{type:'image/png'}); if(navigator.share&&navigator.canShare&&navigator.canShare({files:[f]})) await navigator.share({files:[f],title:'Báo giá gạch'}); else {const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='bao-gia-zalo.png';a.click();}},'image/png')},800);
+      setTimeout(()=>{canvas.toBlob(async b=>{const f=new File([b],'bao-gia-zalo.png',{type:'image/png'}); if(navigator.share&&navigator.canShare&&navigator.canShare({files:[f]})) await navigator.share({files:[f],title:'Báo giá gạch'}); else {const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='bao-gia-zalo.png';a.click();}},'image/png')},1200);
     }
 
     function renderCodeMatches(matches, keyword) {
