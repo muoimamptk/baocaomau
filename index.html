@@ -379,23 +379,17 @@
     const reportBox = document.getElementById("reportBox");
 
     async function downloadImageFast(url, filename) {
-      try {
-        if (!url) return;
-        const response = await fetch(url, { mode: "cors", cache: "no-store" });
-        if (!response.ok) throw new Error("download failed");
-        const blob = await response.blob();
-        const blobUrl = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = blobUrl;
-        a.download = filename || "hinh-anh.jpg";
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 1000);
-      } catch (error) {
-        // Nếu trình duyệt chặn tải ảnh ngoài domain, mở ảnh để người dùng nhấn giữ lưu ảnh.
-        window.open(url, "_blank", "noopener");
-      }
+      if (!url) return;
+      // Tải trực tiếp giống thao tác nhấn giữ ảnh trên điện thoại.
+      // Không dùng fetch/blob vì ảnh ngoài domain có thể bị CORS chặn.
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename || "hinh-anh.jpg";
+      a.target = "_blank";
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
     }
 
     function normalizeText(text) { return String(text || "").trim().toLowerCase(); }
